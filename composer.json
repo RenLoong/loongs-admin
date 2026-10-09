@@ -1,0 +1,36 @@
+{
+    "name": "loongs/admin",
+    "description": "loong-swoole HTTP server application",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "loongs/cache": "dev-main",
+        "loongs/framework": "dev-main",
+        "loongs/helper": "dev-main",
+        "loongs/language": "dev-main",
+        "loongs/oauth": "dev-main",
+        "loongs/orm": "dev-main",
+        "loongs/render": "dev-main"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "/www/wwwroot/loong-swoole/composer/language",
+            "options": {
+                "symlink": false
+            }
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "App\\": "apps/",
+            "Server\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    }
+}
