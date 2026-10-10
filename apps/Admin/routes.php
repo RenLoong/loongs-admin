@@ -22,6 +22,7 @@ use App\Admin\Support\OAuth;
 use App\Admin\Support\OAuthServers;
 use App\Admin\Support\PublicOrigin;
 use Loongs\Cache\CacheManager;
+use Loongs\Uploads\Uploads;
 use Loongs\Config\Repository;
 use Loongs\Language\Integration\Render\RenderTranslator;
 use Loongs\Language\Translator;
@@ -34,6 +35,9 @@ use Loongs\Support\BasePath;
 /** @var \Loongs\Container\Container $container */
 
 $config = $container->make(Repository::class);
+
+// loongs/uploads: config/uploads.php; runtime switch via Uploads::configure/setDefault/extend
+Uploads::configure((array) $config->get('uploads', []));
 
 if (!method_exists(AuthorizationServer::class, 'registerGrant')) {
     throw new RuntimeException('loongs/oauth is too old for the WeChat mini program grant: run `composer update loongs/framework loongs/oauth` (needs oauth ≥ e302cd0, framework ≥ 5386309).');

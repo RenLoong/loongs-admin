@@ -4,16 +4,28 @@
     "type": "project",
     "license": "MIT",
     "require": {
-        "php": "^8.4",
         "loongs/cache": "dev-main",
         "loongs/framework": "dev-main",
         "loongs/helper": "dev-main",
         "loongs/language": "dev-main",
         "loongs/oauth": "dev-main",
         "loongs/orm": "dev-main",
-        "loongs/render": "dev-main"
+        "loongs/render": "dev-main",
+        "loongs/uploads": "dev-main",
+        "php": "^8.4"
     },
     "repositories": [
+        {
+            "type": "path",
+            "url": "../../composer/uploads",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/RenLoong/loongs-uploads.git"
+        },
         {
             "type": "path",
             "url": "/www/wwwroot/loong-swoole/composer/language",
