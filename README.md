@@ -33,6 +33,9 @@ cd loongs-admin
 # 依赖从 Packagist 安装（不要提交 composer.lock；裸机用 update/install）
 composer update
 
+# 依赖均从 Packagist 解析（含 loongs/uploads、loongs/language 等）。中国大陆若 repo.packagist.org 不可达，可临时：
+#   composer config -g repos.packagist composer https://mirrors.cloud.tencent.com/composer/
+
 cp .env.example .env
 # 编辑 .env：数据库、端口、ADMIN_WEB_ORIGINS / OAUTH_* 等
 
