@@ -20,7 +20,7 @@ use Loongs\Render\PageContext;
 use Loongs\Render\PageRegistry;
 
 /**
- * GET /uuims/api/pages/{page} (RENDER.md §2, §4.4, §4.5): page description for the current admin and
+ * GET /uuims/api/pages/{page} (RENDER.md §2, §4.4, §4.5): page description for the current uuims and
  * client platform, shared by PC (Flutter) and uni-app.
  *
  * - The page must be declared in a menu file (menu with page, or a hidden "type": "page" node); its
@@ -79,15 +79,15 @@ final class PageService
         }
         ksort($params);
         $ctx = new PageContext($client, $params, $permCtx, [], $code);
-        $resolver = new AdminPermissionResolver();
-        $key = 'admin_page_' . $this->permissions->version() . '_' . $this->menus->hash() . '_' . I18n::packVersion((string) $client->locale) . '_'
+        $resolver = new UuimsPermissionResolver();
+        $key = 'user_page_' . $this->permissions->version() . '_' . $this->menus->hash() . '_' . I18n::packVersion((string) $client->locale) . '_'
             . substr(hash('sha256', CacheKey::for($this->pages->get($code), $ctx, $resolver) . '|' . json_encode($params)), 0, 32);
         $cached = $this->cache->get($key);
         if (is_array($cached)) {
             return $cached;
         }
         try {
-            $desc = $this->pages->render($code, $ctx, $resolver, new AdminFieldPolicy(), $menuPage['page_type']);
+            $desc = $this->pages->render($code, $ctx, $resolver, new UuimsFieldPolicy(), $menuPage['page_type']);
         } catch (PageNotFound) {
             throw new ApiException(40401, '页面不存在', 404);
         } catch (PageForbidden) {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Uuims\Middleware\AdminAuthMiddleware;
+use App\Uuims\Middleware\UuimsAuthMiddleware;
 
-/** Every System route needs a valid admin token; button permissions are declared per route. */
+/** Every System route needs a valid uuims token; button permissions are declared per route. */
 return [
-    AdminAuthMiddleware::class,
+    UuimsAuthMiddleware::class,
 ];

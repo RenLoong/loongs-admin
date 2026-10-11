@@ -7,7 +7,7 @@ namespace App\Uuims\Support;
 use Loongs\Http\Request;
 
 /**
- * Public origin of the admin API per request — for intranet deployments reachable under several
+ * Public origin of the uuims API per request — for intranet deployments reachable under several
  * names (LAN IP, internal hostname, reverse proxy) where one fixed OAUTH_ISSUER does not fit.
  *
  * - The OAuth issuer (metadata `issuer`, the `iss` authorization response parameter) is the request's

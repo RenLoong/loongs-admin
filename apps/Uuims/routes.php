@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Admin app bootstrap + routes. Module routes (Modules/<Module>/routes.php) are discovered by the
+ * Uuims app bootstrap + routes. Module routes (Modules/<Module>/routes.php) are discovered by the
  * framework; app-wide extra routes live in apps/Uuims/routes/*.php (loaded here, sorted).
  */
 

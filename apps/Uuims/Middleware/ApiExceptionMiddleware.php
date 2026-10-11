@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Uuims\Middleware;
 
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use App\Uuims\Support\Api;
 use App\Uuims\Support\ApiException;
 use Closure;
@@ -31,12 +31,12 @@ final class ApiExceptionMiddleware implements MiddlewareInterface
         } catch (PoolExhaustedException $e) {
             return Api::fail(50301, '服务繁忙，请稍后重试', 503);
         } catch (\Throwable $e) {
-            error_log('[admin] ' . $e::class . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            error_log('[uuims] ' . $e::class . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
             $debug = (bool) $this->config->get('app.debug', false);
 
             return Api::fail(50001, $debug ? $e::class . ': ' . $e->getMessage() : '服务器内部错误', 500);
         } finally {
-            AdminContext::set(null);
+            UuimsContext::set(null);
         }
     }
 }

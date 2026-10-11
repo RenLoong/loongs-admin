@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Uuims\Middleware\AdminAuthMiddleware;
+use App\Uuims\Middleware\UuimsAuthMiddleware;
 
-/** Sample data needs a valid admin token; the permission is declared per route. */
+/** Sample data needs a valid uuims token; the permission is declared per route. */
 return [
-    AdminAuthMiddleware::class,
+    UuimsAuthMiddleware::class,
 ];

@@ -18,7 +18,7 @@ use Loongs\Render\TablePage;
  * 角色列表 (R4, replaces the hand-written roles page). Basic fields are edited in the
  * uuims.system.role-form dialog; menu / button permissions, data scope and field permissions in the
  * registered custom page uuims.system.role-permissions (component role-permission-editor).
- * Data: GET /uuims/api/system/roles (rows carry data_scope + admin_count).
+ * Data: GET /uuims/api/system/roles (rows carry data_scope + user_count).
  */
 #[AsPage('uuims.system.roles', permission: 'system:role:list')]
 final class RolesPage extends TablePage
@@ -37,7 +37,7 @@ final class RolesPage extends TablePage
                 Column::text('code', '编码')->width(140)->mobile(),
                 Column::text('name', '名称')->mobile(),
                 Column::tag('data_scope', '数据范围')->enum(DataScope::class),
-                Column::text('admin_count', '管理员数')->width(90),
+                Column::text('user_count', '管理员数')->width(90),
                 Column::text('sort', '排序')->width(70),
                 Column::tag('status', '状态')->enum(EnableStatus::class)->mobile(),
             ])

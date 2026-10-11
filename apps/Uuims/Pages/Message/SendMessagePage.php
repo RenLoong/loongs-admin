@@ -12,8 +12,8 @@ use Loongs\Render\FormPage;
 use Loongs\Render\PageContext;
 
 /**
- * 发送站内消息 (hidden page node, P5; admin-only: message:send). Recipients are limited to enabled
- * admins inside the sender's data scope (GET /uuims/api/messages/recipients; POST /send checks again).
+ * 发送站内消息 (hidden page node, P5; uuims-only: message:send). Recipients are limited to enabled
+ * users inside the sender's data scope (GET /uuims/api/messages/recipients; POST /send checks again).
  */
 #[AsPage('uuims.message.send-form', permission: 'message:send')]
 final class SendMessagePage extends FormPage
@@ -25,7 +25,7 @@ final class SendMessagePage extends FormPage
             ->columns(1)
             ->fields([
                 Field::switch('all', '发送给全部管理员')->default(false)->help('仅限数据权限范围内的启用管理员'),
-                Field::select('admin_ids', '接收人')->multiple()->optionsApi('/uuims/api/messages/recipients')->visibleWhen('all', 'in', [false, 0, null]),
+                Field::select('user_ids', '接收人')->multiple()->optionsApi('/uuims/api/messages/recipients')->visibleWhen('all', 'in', [false, 0, null]),
                 Field::text('title', '标题')->required()->length(null, 128),
                 Field::radio('level', '级别')->options(MessageLevel::class)->default('info'),
                 Field::textarea('content', '内容')->length(null, 5000),

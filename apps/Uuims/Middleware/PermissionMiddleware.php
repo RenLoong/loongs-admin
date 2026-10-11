@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Uuims\Middleware;
 
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use App\Uuims\Support\Api;
 use App\Uuims\Support\I18n;
 use Closure;
@@ -13,8 +13,8 @@ use Loongs\Http\Response;
 use Loongs\Middleware\MiddlewareInterface;
 
 /**
- * Route-level button / menu permission: $router->post('/x', $action, [PermissionMiddleware::need('system:admin:create')]).
- * Runs after AdminAuthMiddleware (module middleware). Super admin passes; otherwise 403 code 40301.
+ * Route-level button / menu permission: $router->post('/x', $action, [PermissionMiddleware::need('system:uuims:create')]).
+ * Runs after UuimsAuthMiddleware (module middleware). Super uuims passes; otherwise 403 code 40301.
  */
 final class PermissionMiddleware implements MiddlewareInterface
 {
@@ -32,7 +32,7 @@ final class PermissionMiddleware implements MiddlewareInterface
     public function handle(Request $request, Closure $next): Response
     {
         foreach ($this->codes as $code) {
-            if (AdminContext::can($code)) {
+            if (UuimsContext::can($code)) {
                 return $next($request);
             }
         }

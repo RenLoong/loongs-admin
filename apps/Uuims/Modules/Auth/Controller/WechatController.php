@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Uuims\Modules\Auth\Controller;
 
-use App\Uuims\Models\Admin;
+use App\Uuims\Models\Uuims;
 use App\Uuims\Services\Wechat\WechatBindings;
 use App\Uuims\Services\Wechat\WechatException;
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use App\Uuims\Support\Api;
 use App\Uuims\Support\ApiException;
 use App\Uuims\Support\Validator;
@@ -15,8 +15,8 @@ use Loongs\Http\Request;
 use Loongs\Http\Response;
 
 /**
- * WeChat mini program binding of the signed-in admin (password login first, then bind), and
- * unbinding by an administrator (system:admin:unbind-wechat, data scope applies).
+ * WeChat mini program binding of the signed-in uuims (password login first, then bind), and
+ * unbinding by an administrator (system:uuims:unbind-wechat, data scope applies).
  */
 final class WechatController
 {
@@ -25,10 +25,10 @@ final class WechatController
     ) {
     }
 
-    /** GET /uuims/api/auth/wechat → binding state of the current admin (openid never returned). */
+    /** GET /uuims/api/auth/wechat → binding state of the current uuims (openid never returned). */
     public function status(Request $request): Response
     {
-        $row = $this->bindings->forAdmin((int) AdminContext::require()['id']);
+        $row = $this->bindings->forUuims((int) UuimsContext::require()['id']);
 
         return Api::ok([
             'bound' => $row !== null,
@@ -43,7 +43,7 @@ final class WechatController
     {
         $in = Validator::check(Api::input($request), ['code' => 'required|string|max:128'], ['code' => '微信登录凭证']);
         try {
-            $r = $this->bindings->bind((int) AdminContext::require()['id'], (string) $in['code']);
+            $r = $this->bindings->bind((int) UuimsContext::require()['id'], (string) $in['code']);
         } catch (WechatException $e) {
             throw $e->kind === 'invalid_code' ? ApiException::validation(['code' => $e->getMessage()]) : new ApiException(50302, $e->getMessage(), 503);
         }
@@ -54,19 +54,19 @@ final class WechatController
     /** DELETE /uuims/api/auth/wechat/bind — unbind own WeChat. */
     public function unbind(Request $request): Response
     {
-        $n = $this->bindings->unbind((int) AdminContext::require()['id']);
+        $n = $this->bindings->unbind((int) UuimsContext::require()['id']);
 
         return Api::ok(['unbound' => $n > 0], $n > 0 ? '已解绑微信' : '当前账号未绑定微信');
     }
 
-    /** DELETE /uuims/api/system/admins/{id}/wechat */
-    public function unbindAdmin(Request $request): Response
+    /** DELETE /uuims/api/system/users/{id}/wechat */
+    public function unbindUuims(Request $request): Response
     {
-        $admin = Admin::query()->find(Api::id($request)) ?? throw ApiException::notFound();   // data scope
-        if ($admin->is_super && !AdminContext::require()['is_super']) {
+        $uuims = Uuims::query()->find(Api::id($request)) ?? throw ApiException::notFound();   // data scope
+        if ($uuims->is_super && !UuimsContext::require()['is_super']) {
             throw ApiException::forbidden('不能操作超级管理员', 40305);
         }
-        $n = $this->bindings->unbind((int) $admin->id);
+        $n = $this->bindings->unbind((int) $uuims->id);
 
         return Api::ok(['unbound' => $n > 0], $n > 0 ? '已解绑微信' : '该管理员未绑定微信');
     }

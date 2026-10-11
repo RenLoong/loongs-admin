@@ -1,7 +1,7 @@
 # 统一用户身份管理系统（UUIMS）· 后端
 
 
-> **包名 / Packagist**：GitHub 仓库已迁至 `RenLoong/loongs-uuims*`；本仓 `composer.json` 的 `name` 为 `loongs/uuims`。Packagist 上若仍登记为 `loongs/admin`，请到 https://packagist.org 重新提交/迁移该仓库后再改外部 require。本仓库 `type=project`，通常不被其它包 require。
+> **包名 / Packagist**：GitHub 仓库已迁至 `RenLoong/loongs-uuims*`；本仓 `composer.json` 的 `name` 为 `loongs/uuims`。Packagist 上若仍登记为 `loongs/uuims`，请到 https://packagist.org 重新提交/迁移该仓库后再改外部 require。本仓库 `type=project`，通常不被其它包 require。
 
 基于 [loongs/framework](https://github.com/RenLoong/loongs-framework) 等包的 **平台方** 管理系统后端：管理 SaaS 租户、套餐与平台运营。租户自己的业务后台不在本仓库。
 
@@ -24,7 +24,7 @@
 ## 要求
 
 - PHP 8.4+，扩展：`swoole`（^6）、`pdo_mysql`、`openssl`、`redis`（若用 Redis 缓存）等
-- MySQL 8（平台库默认名 `admin_platform`）
+- MySQL 8（平台库默认名 `user_platform`）
 - Composer 2
 
 ## 快速开始
@@ -54,7 +54,7 @@ cp .env.example .env
 
 ```bash
 ./loongs stop|restart|reload|status
-./loongs uuims:install [--username=admin] [--reset-password]
+./loongs uuims:install [--username=uuims] [--reset-password]
 ./loongs uuims:menus
 ./loongs rpc:show|rpc:switch|rpc:set|rpc:reset   # 见框架 RPC 文档
 ```
@@ -69,14 +69,14 @@ cp .env.example .env
 .
 ├── loongs                 # CLI 入口
 ├── apps/
-│   └── Admin/             # 唯一业务 app
+│   └── Uuims/             # 唯一业务 app
 │       ├── Modules/       # Auth / Dashboard / System / Message / Render / Sample …
 │       ├── Support/       # ClientEntry、OAuth、Api …
 │       ├── public/        # web/、h5/ 静态产物
 │       ├── routes/        # 含 client.php 等（全部自动加载）
 │       ├── menu.json
 │       └── database/
-├── config/                # admin.php、cors、database、rpc、process …
+├── config/                # uuims.php、cors、database、rpc、process …
 ├── routes/                # 进程级（如 /health）
 ├── runtime/               # 运行时（gitignore）
 ├── .env.example
@@ -118,7 +118,7 @@ PC / H5 构建步骤见姊妹仓 README；产物分别放到 `apps/Uuims/public/
 ## 权限与租户（摘要）
 
 - 平台端 RBAC：菜单 + 按钮 + 数据（行级）+ 字段；前后端都要校验
-- 平台库 `admin_platform`；租户库按开通创建。访问租户库用 `Orm::using` / `Model::on`，**禁止**在模型上缓存连接
+- 平台库 `user_platform`；租户库按开通创建。访问租户库用 `Orm::using` / `Model::on`，**禁止**在模型上缓存连接
 - 多租户能力长期落在 `loongs/saas`；`loongs/orm` 保持纯 ORM
 
 ## 开发约定

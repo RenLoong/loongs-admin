@@ -14,16 +14,16 @@
       "type": "dir", "name": "系统管理", "path": "/system", "icon": "settings", "sort": 100,
       "children": [
         {
-          "type": "menu", "name": "管理员", "path": "/system/admins", "component": "system/admins", "icon": "users", "perms": "system:admin:list", "sort": 1,
-          "page": "uuims.system.admins", "page_type": "table",
+          "type": "menu", "name": "管理员", "path": "/system/users", "component": "system/users", "icon": "users", "perms": "system:uuims:list", "sort": 1,
+          "page": "uuims.system.users", "page_type": "table",
           "children": [
-            {"type": "page", "name": "管理员表单", "page": "uuims.system.admin-form", "page_type": "form"},
-            {"type": "page", "name": "重置密码", "page": "uuims.system.admin-password", "page_type": "form"},
-            {"type": "button", "name": "新增", "perms": "system:admin:create"},
-            {"type": "button", "name": "编辑", "perms": "system:admin:update"},
-            {"type": "button", "name": "删除", "perms": "system:admin:delete"},
-            {"type": "button", "name": "重置密码", "perms": "system:admin:reset-password"},
-            {"type": "button", "name": "解绑微信", "perms": "system:admin:unbind-wechat"}
+            {"type": "page", "name": "管理员表单", "page": "uuims.system.uuims-form", "page_type": "form"},
+            {"type": "page", "name": "重置密码", "page": "uuims.system.uuims-password", "page_type": "form"},
+            {"type": "button", "name": "新增", "perms": "system:uuims:create"},
+            {"type": "button", "name": "编辑", "perms": "system:uuims:update"},
+            {"type": "button", "name": "删除", "perms": "system:uuims:delete"},
+            {"type": "button", "name": "重置密码", "perms": "system:uuims:reset-password"},
+            {"type": "button", "name": "解绑微信", "perms": "system:uuims:unbind-wechat"}
           ]
         },
         {

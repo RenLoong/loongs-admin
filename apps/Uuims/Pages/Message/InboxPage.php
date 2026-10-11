@@ -14,7 +14,7 @@ use Loongs\Render\PageContext;
 use Loongs\Render\TablePage;
 
 /**
- * 消息（站内消息收件箱, P5) — PC menu /messages. The API always returns the CURRENT admin's own
+ * 消息（站内消息收件箱, P5) — PC menu /messages. The API always returns the CURRENT uuims's own
  * messages (GET /uuims/api/messages, login only); the permission code message:list only controls
  * the PC menu entry. The mobile app has native 消息 pages on the same API.
  */

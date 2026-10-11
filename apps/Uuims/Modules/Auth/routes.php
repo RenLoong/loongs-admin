@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Uuims\Middleware\AdminAuthMiddleware;
+use App\Uuims\Middleware\UuimsAuthMiddleware;
 use App\Uuims\Modules\Auth\Controller\LoginPage;
 use App\Uuims\Modules\Auth\Controller\ProfileController;
 use App\Uuims\Modules\Auth\Controller\WechatController;
@@ -50,11 +50,11 @@ $router->post('/oauth/authorize', $authorize);
 // introspect, RFC 8414 metadata — each answered by the server of the request's public origin
 OAuthRoutes::register($router, $resolve, static fn () => throw new LogicException('authorize is handled above'), $container->make(AuthorizationServer::class));
 
-$router->get('/uuims/api/auth/me', [ProfileController::class, 'me'], [AdminAuthMiddleware::class]);
-$router->get('/uuims/api/auth/menus', [ProfileController::class, 'menus'], [AdminAuthMiddleware::class]);
-$router->put('/uuims/api/auth/password', [ProfileController::class, 'password'], [AdminAuthMiddleware::class]);
+$router->get('/uuims/api/auth/me', [ProfileController::class, 'me'], [UuimsAuthMiddleware::class]);
+$router->get('/uuims/api/auth/menus', [ProfileController::class, 'menus'], [UuimsAuthMiddleware::class]);
+$router->put('/uuims/api/auth/password', [ProfileController::class, 'password'], [UuimsAuthMiddleware::class]);
 
-// WeChat mini program binding of the signed-in admin (bind after a password login; see WechatMiniGrant)
-$router->get('/uuims/api/auth/wechat', [WechatController::class, 'status'], [AdminAuthMiddleware::class]);
-$router->post('/uuims/api/auth/wechat/bind', [WechatController::class, 'bind'], [AdminAuthMiddleware::class]);
-$router->delete('/uuims/api/auth/wechat/bind', [WechatController::class, 'unbind'], [AdminAuthMiddleware::class]);
+// WeChat mini program binding of the signed-in uuims (bind after a password login; see WechatMiniGrant)
+$router->get('/uuims/api/auth/wechat', [WechatController::class, 'status'], [UuimsAuthMiddleware::class]);
+$router->post('/uuims/api/auth/wechat/bind', [WechatController::class, 'bind'], [UuimsAuthMiddleware::class]);
+$router->delete('/uuims/api/auth/wechat/bind', [WechatController::class, 'unbind'], [UuimsAuthMiddleware::class]);

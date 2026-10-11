@@ -226,7 +226,7 @@ final class MenuRegistry
      * Sidebar tree for a set of granted codes: dirs + menus only (no buttons), visible ones, a menu
      * only when its code is granted, a dir only when something below it is shown.
      *
-     * @param list<string>|null $granted null = everything (super admin)
+     * @param list<string>|null $granted null = everything (super uuims)
      * @return list<array<string, mixed>>
      */
     public function menuTree(?array $granted): array

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Uuims\Services\Wechat;
 
-use App\Uuims\Models\Admin;
+use App\Uuims\Models\Uuims;
 use Loongs\OAuth\AuthorizationServer;
 use Loongs\OAuth\Entity\Client;
 use Loongs\OAuth\Exception\OAuthException;
@@ -15,8 +15,8 @@ use Loongs\OAuth\Http\OAuthRequest;
 /**
  * Token endpoint extension grant (loongs/oauth registerGrant):
  *   POST /oauth/token  grant_type=urn:loongs:params:oauth:grant-type:wechat-mini & code=<wx.login code> & client_id=uuims-mobile
- * code → code2Session → openid → bound, enabled admin → access + rotating refresh token.
- * An openid that was never bound is refused: the admin must sign in with username + password in
+ * code → code2Session → openid → bound, enabled uuims → access + rotating refresh token.
+ * An openid that was never bound is refused: the uuims must sign in with username + password in
  * the mini program first (which binds it).
  */
 final class WechatMiniGrant implements ExtensionGrantHandler
@@ -41,16 +41,16 @@ final class WechatMiniGrant implements ExtensionGrantHandler
             throw $e->kind === 'invalid_code' ? OAuthException::invalidGrant($e->getMessage()) : new OAuthException('temporarily_unavailable', $e->getMessage(), 503);
         }
         $row = $this->bindings->forOpenid($session->openid) ?? throw OAuthException::invalidGrant(self::NOT_BOUND);
-        $admin = Admin::query()->withoutGlobalScope('data_scope')->find((int) $row['admin_id']);
-        if ($admin === null) {
+        $uuims = Uuims::query()->withoutGlobalScope('data_scope')->find((int) $row['user_id']);
+        if ($uuims === null) {
             throw OAuthException::invalidGrant(self::NOT_BOUND);
         }
-        if ((int) $admin->status !== 1) {
+        if ((int) $uuims->status !== 1) {
             throw OAuthException::invalidGrant('账号已停用');
         }
         $this->bindings->touch((int) $row['id']);
-        $admin->forceFill(['last_login_at' => date('Y-m-d H:i:s')])->save();
+        $uuims->forceFill(['last_login_at' => date('Y-m-d H:i:s')])->save();
 
-        return new ExtensionGrantResult((string) $admin->id);
+        return new ExtensionGrantResult((string) $uuims->id);
     }
 }

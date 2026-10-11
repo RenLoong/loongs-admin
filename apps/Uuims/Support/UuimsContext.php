@@ -16,9 +16,9 @@ use Swoole\Coroutine;
  *   data: {all: bool, dept_ids: int[], self: bool},
  *   fields: {resource: {field: hidden|masked|readonly|editable}}
  */
-final class AdminContext
+final class UuimsContext
 {
-    private const KEY = 'admin.context';
+    private const KEY = 'uuims.context';
 
     /** @var array<string, mixed> only used when not inside a coroutine */
     private static array $cli = [];
@@ -70,7 +70,7 @@ final class AdminContext
         return $c !== null && ($c['is_super'] || in_array($perm, $c['perms'], true));
     }
 
-    /** Field permission for the current admin (editable when no context / super / not controlled). */
+    /** Field permission for the current uuims (editable when no context / super / not controlled). */
     public static function fieldPerm(string $resource, string $field): string
     {
         $c = self::get();

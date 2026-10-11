@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Uuims\Models\Concerns;
 
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use Loongs\Orm\Model\Builder;
 
 /**
- * Row-level data scope (global scope "data_scope"). Uses the current admin's merged data scope
+ * Row-level data scope (global scope "data_scope"). Uses the current uuims's merged data scope
  * (broadest across roles): all → no condition; otherwise dept column IN (allowed depts) OR owner = me.
- * No admin context (CLI / install / login) or super admin → no condition.
+ * No uuims context (CLI / install / login) or super uuims → no condition.
  *
  * Models override dataScopeColumns(): ['dept' => 'dept_id', 'owner' => 'created_by'].
  * Updates / deletes must load the row through a scoped query first (out-of-scope → 404).
@@ -20,7 +20,7 @@ trait HasDataScope
     public static function bootHasDataScope(): void
     {
         static::addGlobalScope('data_scope', static function (Builder $b): void {
-            $ctx = AdminContext::get();
+            $ctx = UuimsContext::get();
             if ($ctx === null || $ctx['is_super'] || $ctx['data']['all']) {
                 return;
             }
@@ -50,10 +50,10 @@ trait HasDataScope
         return ['dept' => 'dept_id', 'owner' => 'created_by'];
     }
 
-    /** Whether a department id is inside the current admin's data scope (for create / move). */
+    /** Whether a department id is inside the current uuims's data scope (for create / move). */
     public static function deptInScope(?int $deptId): bool
     {
-        $ctx = AdminContext::get();
+        $ctx = UuimsContext::get();
         if ($ctx === null || $ctx['is_super'] || $ctx['data']['all']) {
             return true;
         }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Uuims\Modules\Auth\Controller;
 
-use App\Uuims\Models\Admin;
+use App\Uuims\Models\Uuims;
 use App\Uuims\Services\LoginGuard;
 use App\Uuims\Support\I18n;
 use Loongs\Http\Request;
@@ -17,13 +17,13 @@ use Loongs\OAuth\Http\OAuthResponse;
 /**
  * Login step of the authorization endpoint (README §4): server-rendered page with username,
  * password and captcha; posts back to /oauth/authorize with the validated OAuth parameters as hidden
- * fields. First-party public clients → no consent screen; on success the admin id is approved and the
+ * fields. First-party public clients → no consent screen; on success the uuims id is approved and the
  * library redirects (303) to the client's redirect_uri with code + state + iss.
  *
  * CSRF / replay: every form carries a one-time nonce (Redis, 5 min) bound to its captcha.
  *
  * JSON mode (uni-app mini program / H5, which cannot follow browser redirects): when the request has
- * `Accept: application/json` and the redirect URI is one of admin.oauth.json_redirect_uris, the same
+ * `Accept: application/json` and the redirect URI is one of uuims.oauth.json_redirect_uris, the same
  * step answers {login: {login_nonce, captcha (PNG data URI), error}} instead of HTML; on success the
  * route converts the library's redirect into {code, state, iss} (routes.php). Still authorization
  * code + PKCE: the code is only redeemable with the client's code_verifier.
@@ -75,26 +75,26 @@ final class LoginPage
             return $page('验证码错误', $username);
         }
 
-        $admin = Admin::query()->withoutGlobalScope('data_scope')->where('username', $username)->first();
-        $ok = password_verify($password, $admin !== null ? (string) $admin->getAttribute('password') : (self::$dummyHash ??= Admin::hashPassword(random_bytes(16))));
-        if (!$ok || $admin === null) {
+        $uuims = Uuims::query()->withoutGlobalScope('data_scope')->where('username', $username)->first();
+        $ok = password_verify($password, $uuims !== null ? (string) $uuims->getAttribute('password') : (self::$dummyHash ??= Uuims::hashPassword(random_bytes(16))));
+        if (!$ok || $uuims === null) {
             $left = $this->guard->fail($username);
 
             return $page($left > 0 ? I18n::t('用户名或密码错误（还可尝试 {left} 次）', ['left' => $left]) : '登录失败次数过多，账号已临时锁定', $username, 401);
         }
-        if ((int) $admin->status !== 1) {
+        if ((int) $uuims->status !== 1) {
             return $page('账号已停用', $username, 403);
         }
         $this->guard->clear($username);
-        if (password_needs_rehash((string) $admin->getAttribute('password'), PASSWORD_ARGON2ID)) {
-            $admin->forceFill(['password' => Admin::hashPassword($password)]);
+        if (password_needs_rehash((string) $uuims->getAttribute('password'), PASSWORD_ARGON2ID)) {
+            $uuims->forceFill(['password' => Uuims::hashPassword($password)]);
         }
-        $admin->forceFill([
+        $uuims->forceFill([
             'last_login_at' => date('Y-m-d H:i:s'),
             'last_login_ip' => (string) ($http->swoole()->server['remote_addr'] ?? ''),
         ])->save();
 
-        return AuthorizationDecision::approve((string) $admin->id);
+        return AuthorizationDecision::approve((string) $uuims->id);
     }
 
     private function page(bool $json, AuthorizationRequest $ar, string $error = '', string $username = '', int $status = 200, string $theme = ''): AuthorizationDecision

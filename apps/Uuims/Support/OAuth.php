@@ -14,7 +14,7 @@ use Loongs\OAuth\Storage\OrmStorage;
 use Loongs\OAuth\Storage\Stores;
 
 /**
- * Builds the platform authorization server: opaque tokens, codes, families in admin_platform
+ * Builds the platform authorization server: opaque tokens, codes, families in user_platform
  * (OrmStorage); the public clients come straight from config/uuims.php (redirect URIs follow .env
  * without re-running uuims:install). Extension grants (WeChat mini program) are registered here.
  */

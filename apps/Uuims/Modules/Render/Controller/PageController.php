@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Uuims\Modules\Render\Controller;
 
 use App\Uuims\Render\PageService;
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use App\Uuims\Support\Api;
 use Loongs\Http\Request;
 use Loongs\Http\Response;
@@ -28,7 +28,7 @@ final class PageController
     public function show(Request $request): Response
     {
         $client = ClientInfo::fromHeaders($request->headers());
-        $desc = $this->pages->describe((string) $request->getAttribute('page', ''), AdminContext::require(), $client, $request->queryAll());
+        $desc = $this->pages->describe((string) $request->getAttribute('page', ''), UuimsContext::require(), $client, $request->queryAll());
         $etag = Etag::of($desc);
         $vary = 'Authorization, X-Client-Platform, X-Client-Env, X-Render-Schema, Accept-Language';
         if (Etag::matches($request->header('if-none-match'), $etag)) {

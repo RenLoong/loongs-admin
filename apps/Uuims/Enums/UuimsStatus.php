@@ -6,8 +6,8 @@ namespace App\Uuims\Enums;
 
 use Loongs\Render\Contract\OptionEnum;
 
-/** admins.status — one PHP enum → {value, label, color} for every client (RENDER.md §7). */
-enum AdminStatus: int implements OptionEnum
+/** users.status — one PHP enum → {value, label, color} for every client (RENDER.md §7). */
+enum UuimsStatus: int implements OptionEnum
 {
     case Enabled = 1;
     case Disabled = 0;

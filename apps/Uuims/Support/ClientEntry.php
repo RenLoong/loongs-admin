@@ -80,7 +80,7 @@ final class ClientEntry
         if (!is_file($spa)) {
             $script = $dir === 'h5' ? 'mobile/pack.ps1' : 'client/pack.ps1';
 
-            return (new Response())->html($dir . ' build is missing. Run admin/' . $script . '.', 404);
+            return (new Response())->html($dir . ' build is missing. Run uuims/' . $script . '.', 404);
         }
 
         $html = file_get_contents($spa);

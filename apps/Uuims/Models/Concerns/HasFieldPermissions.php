@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Uuims\Models\Concerns;
 
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use App\Uuims\Support\ApiException;
 use App\Uuims\Support\I18n;
 use App\Uuims\Support\Mask;
 
 /**
  * Field-level permission in the model layer (README §3): the model declares
- * `protected string $fieldResource` (resource name in resource_fields). For the current admin:
+ * `protected string $fieldResource` (resource name in resource_fields). For the current uuims:
  *   toArray(): hidden → removed, masked → masked value, readonly / editable → as is
  *   fill():    only editable fields may be written; a non-editable field is accepted only when it
  *              is unchanged (same value or the masked value it was shown as), else 403 (40302).
- * No admin context / super admin → unrestricted.
+ * No uuims context / super uuims → unrestricted.
  */
 trait HasFieldPermissions
 {
@@ -23,7 +23,7 @@ trait HasFieldPermissions
     public function toArray(): array
     {
         $out = parent::toArray();
-        $ctx = AdminContext::get();
+        $ctx = UuimsContext::get();
         if ($ctx === null || $ctx['is_super']) {
             return $out;
         }
@@ -44,7 +44,7 @@ trait HasFieldPermissions
     /** @param array<string, mixed> $attributes */
     public function fill(array $attributes): static
     {
-        $ctx = AdminContext::get();
+        $ctx = UuimsContext::get();
         if ($ctx !== null && !$ctx['is_super']) {
             foreach ($ctx['fields'][$this->fieldResource] ?? [] as $field => $perm) {
                 if ($perm === 'editable' || !array_key_exists($field, $attributes)) {

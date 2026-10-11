@@ -23,7 +23,7 @@ final class SampleTenants
         1002 => ['code' => 'demo-sz', 'name' => '深圳样例零售连锁', 'contact' => '李华', 'mobile' => '13900001002', 'email' => 'it@demo-sz.example',
             'plan' => '旗舰版', 'plan_level' => 3, 'status' => 1, 'seats' => 200, 'seats_used' => 171, 'balance' => 56000.0, 'auto_renew' => true,
             'domain' => 'https://demo-sz.example', 'region' => '华南（深圳）', 'opened_days' => 720, 'expires_days' => 210],
-        1003 => ['code' => 'demo-bj', 'name' => '北京演示教育', 'contact' => '赵敏', 'mobile' => '13700001003', 'email' => 'admin@demo-bj.example',
+        1003 => ['code' => 'demo-bj', 'name' => '北京演示教育', 'contact' => '赵敏', 'mobile' => '13700001003', 'email' => 'uuims@demo-bj.example',
             'plan' => '基础版', 'plan_level' => 1, 'status' => 0, 'seats' => 10, 'seats_used' => 9, 'balance' => 0.0, 'auto_renew' => false,
             'domain' => 'https://demo-bj.example', 'region' => '华北（北京）', 'opened_days' => 12, 'expires_days' => 2],
     ];
@@ -121,7 +121,7 @@ final class SampleTenants
         $now = new \DateTimeImmutable('today 09:30');
 
         return [
-            ['time' => $now->modify('-1 day')->format('Y-m-d H:i:s'), 'content' => I18n::t('管理员 admin 调整席位上限为 {n}', ['n' => $t['seats'] ?? 0])],
+            ['time' => $now->modify('-1 day')->format('Y-m-d H:i:s'), 'content' => I18n::t('管理员 uuims 调整席位上限为 {n}', ['n' => $t['seats'] ?? 0])],
             ['time' => $now->modify('-9 days')->format('Y-m-d H:i:s'), 'content' => I18n::t('自动续费成功（{plan}）', ['plan' => I18n::msg((string) ($t['plan'] ?? ''))])],
             ['time' => $now->modify('-40 days')->format('Y-m-d H:i:s'), 'content' => I18n::t('租户联系人变更为 {name}', ['name' => I18n::msg((string) ($t['contact'] ?? ''))])],
             ['time' => (string) ($t['opened_at'] ?? ''), 'content' => '租户开通'],
@@ -144,7 +144,7 @@ final class SampleTenants
                 break;
             }
             $rows[] = ['id' => $id * 10 + ++$n, 'tenant_id' => $id, 'action' => $action, 'plan' => $plan,
-                'amount' => [0 => 0, 1 => 3999, 2 => 7999, 3 => 7999][$step] * $t['plan_level'], 'operator' => $step === 0 ? '系统' : 'admin',
+                'amount' => [0 => 0, 1 => 3999, 2 => 7999, 3 => 7999][$step] * $t['plan_level'], 'operator' => $step === 0 ? '系统' : 'uuims',
                 'created_at' => $at->format('Y-m-d H:i:s')];
         }
 

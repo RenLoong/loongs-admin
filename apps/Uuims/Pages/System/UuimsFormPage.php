@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Uuims\Pages\System;
 
-use App\Uuims\Enums\AdminStatus;
+use App\Uuims\Enums\UuimsStatus;
 use Loongs\Render\AsPage;
 use Loongs\Render\Builder\Form;
 use Loongs\Render\Component\Field;
@@ -14,10 +14,10 @@ use Loongs\Render\PageContext;
 
 /**
  * 新增 / 编辑管理员 (hidden page node in menu.json). With ?id= the client loads the record and submits
- * PUT; without it POST. Field permissions of resource "admin" (mobile, email) apply.
+ * PUT; without it POST. Field permissions of resource "uuims" (mobile, email) apply.
  */
-#[AsPage('uuims.system.admin-form', permission: ['system:admin:create', 'system:admin:update'])]
-final class AdminFormPage extends FormPage
+#[AsPage('uuims.system.uuims-form', permission: ['system:uuims:create', 'system:uuims:update'])]
+final class UuimsFormPage extends FormPage
 {
     public function build(PageContext $ctx): Form
     {
@@ -30,16 +30,16 @@ final class AdminFormPage extends FormPage
         }
 
         return Form::make($edit ? '编辑管理员' : '新增管理员')
-            ->resource('admin')
-            ->load('/uuims/api/system/admins/{id}')
-            ->submit('POST', '/uuims/api/system/admins', 'create')
-            ->submit('PUT', '/uuims/api/system/admins/{id}', 'update')
+            ->resource('uuims')
+            ->load('/uuims/api/system/users/{id}')
+            ->submit('POST', '/uuims/api/system/users', 'create')
+            ->submit('PUT', '/uuims/api/system/users/{id}', 'update')
             ->columns(2)
             ->sections([
                 Section::make('账号', [
                     ...$account,
                     Field::text('nickname', '昵称')->length(null, 64)->span(12),
-                    Field::radio('status', '状态')->options(AdminStatus::class)->default(1)->span(12),
+                    Field::radio('status', '状态')->options(UuimsStatus::class)->default(1)->span(12),
                 ]),
                 Section::make('联系方式', [
                     Field::text('mobile', '手机号')->length(null, 32)->span(12),

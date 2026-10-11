@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Uuims\Middleware\PermissionMiddleware as P;
-use App\Uuims\Modules\System\Controller\AdminController;
+use App\Uuims\Modules\System\Controller\UuimsController;
 use App\Uuims\Modules\System\Controller\DeptController;
 use App\Uuims\Modules\System\Controller\FieldController;
 use App\Uuims\Modules\System\Controller\MenuController;
@@ -14,18 +14,18 @@ use App\Uuims\Modules\Auth\Controller\WechatController;
 
 $api = '/uuims/api/system';
 
-// Admins (data scope + field permissions apply)
-$router->get("$api/admins", [AdminController::class, 'index'], [P::need('system:admin:list')]);
-$router->post("$api/admins", [AdminController::class, 'store'], [P::need('system:admin:create')]);
-$router->get("$api/admins/{id}", [AdminController::class, 'show'], [P::need('system:admin:list')]);
-$router->put("$api/admins/{id}", [AdminController::class, 'update'], [P::need('system:admin:update')]);
-$router->delete("$api/admins/{id}", [AdminController::class, 'destroy'], [P::need('system:admin:delete')]);
-$router->put("$api/admins/{id}/password", [AdminController::class, 'resetPassword'], [P::need('system:admin:reset-password')]);
-$router->delete("$api/admins/{id}/wechat", [WechatController::class, 'unbindAdmin'], [P::need('system:admin:unbind-wechat')]);
+// Users (data scope + field permissions apply)
+$router->get("$api/users", [UuimsController::class, 'index'], [P::need('system:uuims:list')]);
+$router->post("$api/users", [UuimsController::class, 'store'], [P::need('system:uuims:create')]);
+$router->get("$api/users/{id}", [UuimsController::class, 'show'], [P::need('system:uuims:list')]);
+$router->put("$api/users/{id}", [UuimsController::class, 'update'], [P::need('system:uuims:update')]);
+$router->delete("$api/users/{id}", [UuimsController::class, 'destroy'], [P::need('system:uuims:delete')]);
+$router->put("$api/users/{id}/password", [UuimsController::class, 'resetPassword'], [P::need('system:uuims:reset-password')]);
+$router->delete("$api/users/{id}/wechat", [WechatController::class, 'unbindUuims'], [P::need('system:uuims:unbind-wechat')]);
 
 // Roles (permission codes, data scope, field permissions)
 $router->get("$api/roles", [RoleController::class, 'index'], [P::need('system:role:list')]);
-$router->get("$api/roles/options", [RoleController::class, 'options'], [P::need('system:role:list', 'system:admin:create', 'system:admin:update')]);
+$router->get("$api/roles/options", [RoleController::class, 'options'], [P::need('system:role:list', 'system:uuims:create', 'system:uuims:update')]);
 $router->post("$api/roles", [RoleController::class, 'store'], [P::need('system:role:create')]);
 $router->get("$api/roles/{id}", [RoleController::class, 'show'], [P::need('system:role:list')]);
 $router->put("$api/roles/{id}", [RoleController::class, 'update'], [P::need('system:role:update')]);
@@ -36,7 +36,7 @@ $router->get("$api/menus", [MenuController::class, 'index'], [P::need('system:me
 $router->get("$api/menus/sources", [MenuController::class, 'sources'], [P::need('system:menu:list')]);
 
 // Departments
-$router->get("$api/depts", [DeptController::class, 'index'], [P::need('system:dept:list', 'system:admin:list', 'system:role:list')]);
+$router->get("$api/depts", [DeptController::class, 'index'], [P::need('system:dept:list', 'system:uuims:list', 'system:role:list')]);
 $router->get("$api/depts/{id}", [DeptController::class, 'show'], [P::need('system:dept:list')]);
 $router->post("$api/depts", [DeptController::class, 'store'], [P::need('system:dept:create')]);
 $router->put("$api/depts/{id}", [DeptController::class, 'update'], [P::need('system:dept:update')]);

@@ -9,10 +9,10 @@ use Loongs\Render\PageContext;
 
 /**
  * loongs/render permission check backed by the P1 permission context (PermissionService::context():
- * role_permission codes of all enabled roles, super admin = everything). PageContext::$user is that
+ * role_permission codes of all enabled roles, super uuims = everything). PageContext::$user is that
  * context array.
  */
-final class AdminPermissionResolver implements PermissionResolver
+final class UuimsPermissionResolver implements PermissionResolver
 {
     public function allows(string $code, PageContext $ctx): bool
     {
@@ -22,8 +22,8 @@ final class AdminPermissionResolver implements PermissionResolver
     }
 
     /**
-     * Everything that changes a rendered description for this admin: super flag, permission codes and
-     * field permissions (two admins with the same roles share cached descriptions).
+     * Everything that changes a rendered description for this uuims: super flag, permission codes and
+     * field permissions (two users with the same roles share cached descriptions).
      */
     public function fingerprint(PageContext $ctx): string
     {

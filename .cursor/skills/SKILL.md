@@ -8,7 +8,7 @@ description: >-
 
 # 统一用户身份管理系统（UUIMS） 后端
 
-作用范围：**当前仓库根**（`RenLoong/loongs-uuims` / 本机 admin 后端目录：含 `./loongs`、`apps/Uuims/`、`config/`、`.env`）。
+作用范围：**当前仓库根**（`RenLoong/loongs-uuims` / 本机 uuims 后端目录：含 `./loongs`、`apps/Uuims/`、`config/`、`.env`）。
 
 产品：**平台方**管理 SaaS 租户 / 套餐 / 运营；租户自己的后台不在本仓库。规划见上级 monorepo 的 `README.md`（若存在）或本仓文档。
 
@@ -22,8 +22,8 @@ description: >-
 ## 硬约束
 
 1. 不要动用户 `production/` 目录；不要动其 **9501/9502** 冒烟栈。本项目默认 **21000–21002**。
-2. **`apps/` 只放真实 app**（当前 `Admin/`）；路由任意命名 `.php`，框架按目录加载，禁止硬编码单个 `route.php`。
-3. 跨 app 只能 RPC；Admin 内模块可直接调用本 app 类。
+2. **`apps/` 只放真实 app**（当前 `Uuims/`）；路由任意命名 `.php`，框架按目录加载，禁止硬编码单个 `route.php`。
+3. 跨 app 只能 RPC；Uuims 内模块可直接调用本 app 类。
 4. 租户库：`Orm::using` / `Model::on` 按次连接，禁止模型缓存连接；租户能力长期在 `loongs/saas`。
 5. OAuth：`loongs/oauth`，JWE；MySQL 持久化；刷新轮换；授权码强制 PKCE S256。
 6. 用户自管重启时，Agent **勿擅自** `./loongs restart`，除非明确要求。
@@ -77,4 +77,4 @@ description: >-
 ## Agent 习惯
 
 - 不提交 `.env` / 密钥；`.gitignore` 已忽略 `vendor/`、`composer.lock`、`composer.dev.json`、`runtime/*`、`bin/smoke_*`。
-- 框架通用约定见 loongs 应用「框架应用与 RPC」技能；本文件只写 Admin 差异。
+- 框架通用约定见 loongs 应用「框架应用与 RPC」技能；本文件只写 Uuims 差异。

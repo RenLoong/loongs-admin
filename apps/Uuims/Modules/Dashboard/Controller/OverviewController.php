@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Uuims\Modules\Dashboard\Controller;
 
-use App\Uuims\Models\Admin;
+use App\Uuims\Models\Uuims;
 use App\Uuims\Samples\SampleTenants;
 use App\Uuims\Support\Api;
 use App\Uuims\Support\I18n;
@@ -15,41 +15,41 @@ use Loongs\Orm\Orm;
 /**
  * Data of the 平台概览 dashboard (page uuims.dashboard.overview, RENDER.md §6.1 / §14).
  *
- * Real data: admins (row-level data scope of the current admin applies through the Admin model),
+ * Real data: users (row-level data scope of the current uuims applies through the Uuims model),
  * roles, departments, WeChat bindings. There is no login log table, so the "最近登录" series counts
- * admins by the day of their last login. Tenant charts are SAMPLE data (SampleTenants) until the
+ * users by the day of their last login. Tenant charts are SAMPLE data (SampleTenants) until the
  * tenant module (P2) exists; their routes live under /uuims/api/samples/*.
  */
 final class OverviewController
 {
-    /** Stat cards: {admins, admins_mom, enabled, roles, depts, wechat}. */
+    /** Stat cards: {users, users_mom, enabled, roles, depts, wechat}. */
     public function stats(Request $request): Response
     {
-        $admins = $this->admins();
-        $total = count($admins);
+        $users = $this->users();
+        $total = count($users);
         $monthAgo = (new \DateTimeImmutable('-30 days'))->format('Y-m-d H:i:s');
-        $before = count(array_filter($admins, static fn (array $a): bool => $a['created_at'] !== null && $a['created_at'] < $monthAgo));
-        $ids = array_column($admins, 'id');
+        $before = count(array_filter($users, static fn (array $a): bool => $a['created_at'] !== null && $a['created_at'] < $monthAgo));
+        $ids = array_column($users, 'id');
 
         return Api::ok([
-            'admins' => $total,
-            'admins_mom' => $before > 0 ? round(($total - $before) / $before, 4) : null,
-            'enabled' => count(array_filter($admins, static fn (array $a): bool => $a['status'] === 1)),
+            'users' => $total,
+            'users_mom' => $before > 0 ? round(($total - $before) / $before, 4) : null,
+            'enabled' => count(array_filter($users, static fn (array $a): bool => $a['status'] === 1)),
             'roles' => (int) Orm::table('roles')->count(),
             'depts' => (int) Orm::table('depts')->count(),
-            'wechat' => $ids === [] ? 0 : (int) Orm::table('admin_wechat')->whereIn('admin_id', $ids)->count(),
+            'wechat' => $ids === [] ? 0 : (int) Orm::table('user_wechat')->whereIn('user_id', $ids)->count(),
         ]);
     }
 
-    /** Last 30 days: [{date, created, active}] (active = admins whose last login was that day). */
-    public function adminTrend(Request $request): Response
+    /** Last 30 days: [{date, created, active}] (active = users whose last login was that day). */
+    public function uuimsTrend(Request $request): Response
     {
         $days = [];
         $start = new \DateTimeImmutable('today -29 days');
         for ($i = 0; $i < 30; $i++) {
             $days[$start->modify("+{$i} days")->format('Y-m-d')] = ['created' => 0, 'active' => 0];
         }
-        foreach ($this->admins() as $a) {
+        foreach ($this->users() as $a) {
             foreach (['created' => $a['created_at'], 'active' => $a['last_login_at']] as $k => $at) {
                 $d = $at !== null ? substr($at, 0, 10) : null;
                 if ($d !== null && isset($days[$d])) {
@@ -66,10 +66,10 @@ final class OverviewController
     }
 
     /** Donut: [{name, status, count}]. */
-    public function adminStatus(Request $request): Response
+    public function uuimsStatus(Request $request): Response
     {
         $by = [1 => 0, 0 => 0];
-        foreach ($this->admins() as $a) {
+        foreach ($this->users() as $a) {
             $by[$a['status'] === 1 ? 1 : 0]++;
         }
 
@@ -79,12 +79,12 @@ final class OverviewController
         ]);
     }
 
-    /** Per department (rank + stacked bar), most admins first: [{name, count, enabled, disabled}]. */
-    public function deptAdmins(Request $request): Response
+    /** Per department (rank + stacked bar), most users first: [{name, count, enabled, disabled}]. */
+    public function deptUsers(Request $request): Response
     {
         $names = Orm::table('depts')->pluck('name', 'id')->all();
         $by = [];
-        foreach ($this->admins() as $a) {
+        foreach ($this->users() as $a) {
             $key = $a['dept_id'] !== null && isset($names[$a['dept_id']]) ? (string) $names[$a['dept_id']] : I18n::t('未分配部门');
             $by[$key] ??= ['name' => $key, 'count' => 0, 'enabled' => 0, 'disabled' => 0];
             $by[$key]['count']++;
@@ -107,14 +107,14 @@ final class OverviewController
     public function sampleTenantScale(Request $request): Response { return Api::ok(I18n::deep(SampleTenants::tenantScale())); }
 
     /**
-     * Admins visible to the current admin (data scope), only the columns the overview needs.
+     * Users visible to the current uuims (data scope), only the columns the overview needs.
      *
      * @return list<array{id: int, status: int, dept_id: ?int, created_at: ?string, last_login_at: ?string}>
      */
-    private function admins(): array
+    private function users(): array
     {
         $out = [];
-        foreach (Admin::query()->get()->all() as $a) {
+        foreach (Uuims::query()->get()->all() as $a) {
             $out[] = [
                 'id' => (int) $a->id,
                 'status' => (int) $a->status,

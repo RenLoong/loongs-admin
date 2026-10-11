@@ -7,8 +7,8 @@ use App\Uuims\Modules\Message\Controller\MessageController as M;
 
 /** @var \Loongs\Routing\Router $router */
 
-// P5 站内消息. Inbox endpoints only need login: every admin reads / marks only their OWN messages
-// (mobile tab 消息 for everyone). Sending is admin-only: permission message:send (menu.json).
+// P5 站内消息. Inbox endpoints only need login: every uuims reads / marks only their OWN messages
+// (mobile tab 消息 for everyone). Sending is uuims-only: permission message:send (menu.json).
 $api = '/uuims/api/messages';
 $router->get($api, [M::class, 'index']);
 $router->get("$api/unread-count", [M::class, 'unreadCount']);

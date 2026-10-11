@@ -10,7 +10,7 @@ use Loongs\Http\Response;
 
 /**
  * GET /health — server-level infrastructure endpoint (not part of apps/Uuims).
- * Reports app identity plus platform DB (admin_platform) and Redis reachability.
+ * Reports app identity plus platform DB (user_platform) and Redis reachability.
  */
 final class HealthController
 {

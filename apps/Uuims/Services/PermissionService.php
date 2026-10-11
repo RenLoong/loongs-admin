@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace App\Uuims\Services;
 
-use App\Uuims\Models\Admin;
+use App\Uuims\Models\Uuims;
 use App\Uuims\Support\MenuRegistry;
 use App\Uuims\Support\Tree;
 use Loongs\Cache\CacheManager;
 use Loongs\Orm\Orm;
 
 /**
- * Builds and caches an admin's merged permissions (RBAC, README §3):
+ * Builds and caches an uuims's merged permissions (RBAC, README §3):
  * permission codes (menus + buttons from the merged apps/*\/menu.json, granted per role in
  * role_permission), data scope and field permissions. Multiple roles: the broadest permission wins.
- * Cached per admin (loongs/cache) under a global version that is bumped whenever roles, grants,
- * departments or admin-role assignments change; the key also carries the menu files' hash, so a
+ * Cached per uuims (loongs/cache) under a global version that is bumped whenever roles, grants,
+ * departments or uuims-role assignments change; the key also carries the menu files' hash, so a
  * changed menu.json never serves stale permission sets.
  */
 final class PermissionService
 {
-    private const VERSION_KEY = 'admin_perm_version';
+    private const VERSION_KEY = 'user_perm_version';
 
     /** field permission rank: broader = higher */
     public const FIELD_RANK = ['hidden' => 0, 'masked' => 1, 'readonly' => 2, 'editable' => 3];
@@ -38,12 +38,12 @@ final class PermissionService
     }
 
     /** @return array<string, mixed> */
-    public function context(Admin $admin): array
+    public function context(Uuims $uuims): array
     {
-        $key = 'admin_perm_' . $this->version() . '_' . $this->menus->hash() . '_' . $admin->id;
+        $key = 'user_perm_' . $this->version() . '_' . $this->menus->hash() . '_' . $uuims->id;
         $ctx = $this->cache->get($key);
         if (!is_array($ctx)) {
-            $ctx = $this->build($admin);
+            $ctx = $this->build($uuims);
             $this->cache->set($key, $ctx, $this->ttl);
         }
 
@@ -71,13 +71,13 @@ final class PermissionService
     }
 
     /** @return array<string, mixed> */
-    public function build(Admin $admin): array
+    public function build(Uuims $uuims): array
     {
-        $roles = Orm::table('admin_role')->join('roles', 'roles.id', '=', 'admin_role.role_id')
-            ->where('admin_role.admin_id', $admin->id)->where('roles.status', 1)
+        $roles = Orm::table('user_role')->join('roles', 'roles.id', '=', 'user_role.role_id')
+            ->where('user_role.user_id', $uuims->id)->where('roles.status', 1)
             ->select('roles.id', 'roles.code', 'roles.name')->get()->all();
         $roleIds = array_map(static fn (array $r): int => (int) $r['id'], $roles);
-        $isSuper = (bool) $admin->is_super;
+        $isSuper = (bool) $uuims->is_super;
 
         // permission codes (menus + buttons): granted ∩ codes that exist in the merged menu files
         if ($isSuper) {
@@ -105,14 +105,14 @@ final class PermissionService
                         $data['dept_ids'] = array_merge($data['dept_ids'], array_map('intval', is_array($ids) ? $ids : []));
                         break;
                     case 'dept':
-                        if ($admin->dept_id) {
-                            $data['dept_ids'][] = (int) $admin->dept_id;
+                        if ($uuims->dept_id) {
+                            $data['dept_ids'][] = (int) $uuims->dept_id;
                         }
                         break;
                     case 'dept_and_child':
-                        if ($admin->dept_id) {
+                        if ($uuims->dept_id) {
                             $deptRows ??= Orm::table('depts')->select('id', 'parent_id')->get()->all();
-                            $data['dept_ids'] = array_merge($data['dept_ids'], Tree::descendants($deptRows, (int) $admin->dept_id));
+                            $data['dept_ids'] = array_merge($data['dept_ids'], Tree::descendants($deptRows, (int) $uuims->dept_id));
                         }
                         break;
                     default:
@@ -148,9 +148,9 @@ final class PermissionService
         }
 
         return [
-            'id' => (int) $admin->id,
-            'username' => (string) $admin->username,
-            'dept_id' => $admin->dept_id === null ? null : (int) $admin->dept_id,
+            'id' => (int) $uuims->id,
+            'username' => (string) $uuims->username,
+            'dept_id' => $uuims->dept_id === null ? null : (int) $uuims->dept_id,
             'is_super' => $isSuper,
             'roles' => array_map(static fn (array $r): array => ['id' => (int) $r['id'], 'code' => (string) $r['code'], 'name' => (string) $r['name']], $roles),
             'role_ids' => $roleIds,
@@ -161,7 +161,7 @@ final class PermissionService
     }
 
     /**
-     * Sidebar menu tree (dirs + menus, visible) of the merged menu files, filtered by the admin's
+     * Sidebar menu tree (dirs + menus, visible) of the merged menu files, filtered by the uuims's
      * codes; dirs are kept when something below them is visible.
      *
      * @param array<string, mixed> $ctx

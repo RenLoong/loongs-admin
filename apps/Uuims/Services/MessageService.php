@@ -10,25 +10,25 @@ use Loongs\Orm\Orm;
 use Loongs\Orm\Pagination\Paginator;
 
 /**
- * 站内消息 (P5): one admin_messages row per recipient. No push channel yet (App push / 订阅消息
+ * 站内消息 (P5): one user_messages row per recipient. No push channel yet (App push / 订阅消息
  * come later); clients poll the unread count. Usable from any backend code:
  *
  *   (new MessageService())->send([12, 15], '租户即将到期', '杭州示例科技 3 天后到期', 'warning');
  *
- * Recipient validation (existing admin, data scope) is the caller's job — the admin send
- * endpoint (MessageController::send) resolves recipients through the Admin model (data scope).
+ * Recipient validation (existing uuims, data scope) is the caller's job — the uuims send
+ * endpoint (MessageController::send) resolves recipients through the Uuims model (data scope).
  */
 final class MessageService
 {
-    public const TABLE = 'admin_messages';
+    public const TABLE = 'user_messages';
 
     /**
-     * @param list<int> $adminIds recipients
+     * @param list<int> $userIds recipients
      * @return int number of messages written
      */
-    public function send(array $adminIds, string $title, ?string $content = null, string $level = 'info', ?int $senderId = null, ?string $link = null): int
+    public function send(array $userIds, string $title, ?string $content = null, string $level = 'info', ?int $senderId = null, ?string $link = null): int
     {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $adminIds), static fn (int $id): bool => $id > 0)));
+        $ids = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn (int $id): bool => $id > 0)));
         if ($ids === []) {
             return 0;
         }
@@ -36,7 +36,7 @@ final class MessageService
         $now = date('Y-m-d H:i:s');
         foreach (array_chunk($ids, 500) as $chunk) {
             Orm::table(self::TABLE)->insert(array_map(static fn (int $id): array => [
-                'admin_id' => $id, 'sender_id' => $senderId, 'title' => mb_substr($title, 0, 128), 'content' => $content,
+                'user_id' => $id, 'sender_id' => $senderId, 'title' => mb_substr($title, 0, 128), 'content' => $content,
                 'level' => $level, 'link' => $link, 'read_at' => null, 'created_at' => $now,
             ], $chunk));
         }
@@ -45,9 +45,9 @@ final class MessageService
     }
 
     /** @param array{status?: string, keyword?: string, level?: string} $filters status: unread | read */
-    public function list(int $adminId, int $page, int $size, array $filters = []): Paginator
+    public function list(int $userId, int $page, int $size, array $filters = []): Paginator
     {
-        $q = Orm::table(self::TABLE)->where('admin_id', $adminId);
+        $q = Orm::table(self::TABLE)->where('user_id', $userId);
         $status = $filters['status'] ?? '';
         if ($status === 'unread') {
             $q->whereNull('read_at');
@@ -65,31 +65,31 @@ final class MessageService
     }
 
     /** @return array<string, mixed>|null */
-    public function find(int $adminId, int $id): ?array
+    public function find(int $userId, int $id): ?array
     {
-        return Orm::table(self::TABLE)->where('admin_id', $adminId)->where('id', $id)->first();
+        return Orm::table(self::TABLE)->where('user_id', $userId)->where('id', $id)->first();
     }
 
-    public function unreadCount(int $adminId): int
+    public function unreadCount(int $userId): int
     {
-        return Orm::table(self::TABLE)->where('admin_id', $adminId)->whereNull('read_at')->count();
+        return Orm::table(self::TABLE)->where('user_id', $userId)->whereNull('read_at')->count();
     }
 
     /** @return bool false when the message does not exist / belongs to someone else */
-    public function markRead(int $adminId, int $id): bool
+    public function markRead(int $userId, int $id): bool
     {
-        if ($this->find($adminId, $id) === null) {
+        if ($this->find($userId, $id) === null) {
             return false;
         }
-        Orm::table(self::TABLE)->where('admin_id', $adminId)->where('id', $id)->whereNull('read_at')->update(['read_at' => date('Y-m-d H:i:s')]);
+        Orm::table(self::TABLE)->where('user_id', $userId)->where('id', $id)->whereNull('read_at')->update(['read_at' => date('Y-m-d H:i:s')]);
 
         return true;
     }
 
     /** @return int messages newly marked as read */
-    public function markAllRead(int $adminId): int
+    public function markAllRead(int $userId): int
     {
-        return Orm::table(self::TABLE)->where('admin_id', $adminId)->whereNull('read_at')->update(['read_at' => date('Y-m-d H:i:s')]);
+        return Orm::table(self::TABLE)->where('user_id', $userId)->whereNull('read_at')->update(['read_at' => date('Y-m-d H:i:s')]);
     }
 
     /** Row → API shape (ids as int, sender name, read flag). @param array<string, mixed> $row @param array<int, string> $senders */
@@ -120,7 +120,7 @@ final class MessageService
             return [];
         }
         $out = [];
-        foreach (Orm::table('admins')->whereIn('id', $ids)->select('id', 'username', 'nickname')->get()->all() as $a) {
+        foreach (Orm::table('users')->whereIn('id', $ids)->select('id', 'username', 'nickname')->get()->all() as $a) {
             $out[(int) $a['id']] = (string) ($a['nickname'] !== '' && $a['nickname'] !== null ? $a['nickname'] : $a['username']);
         }
 

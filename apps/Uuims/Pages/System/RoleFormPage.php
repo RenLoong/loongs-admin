@@ -29,7 +29,7 @@ final class RoleFormPage extends FormPage
             ->submit('PUT', '/uuims/api/system/roles/{id}', 'update')
             ->columns(2)
             ->fields([
-                Field::text('code', '编码')->required()->placeholder('如 ops_admin')
+                Field::text('code', '编码')->required()->placeholder('如 ops_uuims')
                     ->regex('^[a-z][a-z0-9_:-]{1,63}$', '小写字母开头，2–64 位小写字母、数字或 _ : -')->span(12),
                 Field::text('name', '名称')->required()->length(null, 64)->span(12),
                 Field::number('sort', '排序')->default(0)->span(12),

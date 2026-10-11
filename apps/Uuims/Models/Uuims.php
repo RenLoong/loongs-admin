@@ -8,20 +8,20 @@ use App\Uuims\Models\Concerns\HasDataScope;
 use App\Uuims\Models\Concerns\HasFieldPermissions;
 use Loongs\Orm\Model\Model;
 
-/** Platform administrator (admin_platform.admins). */
-final class Admin extends Model
+/** Platform administrator (user_platform.users). */
+final class Uuims extends Model
 {
     use HasDataScope;
     use HasFieldPermissions;
 
-    protected string $table = 'admins';
-    protected string $fieldResource = 'admin';
+    protected string $table = 'users';
+    protected string $fieldResource = 'uuims';
     protected array $fillable = ['username', 'password', 'nickname', 'mobile', 'email', 'dept_id', 'status', 'is_super',
         'last_login_at', 'last_login_ip', 'password_changed_at', 'created_by'];
     protected array $hidden = ['password'];
     protected array $casts = ['id' => 'int', 'dept_id' => 'int', 'status' => 'int', 'is_super' => 'bool', 'created_by' => 'int'];
 
-    /** Admins: "self" data scope = the admin's own record. */
+    /** Users: "self" data scope = the uuims's own record. */
     public function dataScopeColumns(): array
     {
         return ['dept' => 'dept_id', 'owner' => 'id'];

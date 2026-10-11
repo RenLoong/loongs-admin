@@ -51,7 +51,7 @@ return [
                     'loongs-mp://auth',                 // mini program / H5 JSON login (no browser redirect, see json_redirect_uris)
                 ], $csv('UUIMS_MOBILE_REDIRECT_URIS')))),
                 'scopes' => ['uuims', 'profile'],
-                // WeChat mini program login of an admin whose openid was bound after a password login
+                // WeChat mini program login of an uuims whose openid was bound after a password login
                 'extension_grants' => ['urn:loongs:params:oauth:grant-type:wechat-mini'],
             ],
         ],

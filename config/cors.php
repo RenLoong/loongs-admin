@@ -7,7 +7,7 @@ declare(strict_types=1);
  * Server\Http\Middleware\CorsMiddleware (registered in routes/cors.php).
  *
  * CORS_ALLOWED_ORIGINS: comma-separated exact origins, or * (dev only). UUIMS_WEB_ORIGINS (the origins
- * serving the admin web build, see config/uuims.php) are always added.
+ * serving the uuims web build, see config/uuims.php) are always added.
  */
 $list = static fn (string $key, string $default = ''): array => array_values(array_filter(array_map('trim', explode(',', (string) env($key, $default)))));
 

@@ -241,7 +241,7 @@ final class MenusCommand extends Command
                 continue;
             }
             if ($def->permissions === []) {
-                $warnings[] = "page \"{$code}\" ({$def->class}) has no #[AsPage] permission: every logged-in admin can load it";
+                $warnings[] = "page \"{$code}\" ({$def->class}) has no #[AsPage] permission: every logged-in uuims can load it";
             }
             $lines[] = sprintf('page   %-32s %-9s %s  OK (permission %s; %d button code(s), %d field(s))', $code, $p['page_type'], $def->class,
                 $def->permissions === [] ? '-' : implode('|', $def->permissions), count($used['codes']), count($used['fields']));

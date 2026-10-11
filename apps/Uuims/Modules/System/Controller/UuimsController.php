@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Uuims\Modules\System\Controller;
 
-use App\Uuims\Models\Admin;
+use App\Uuims\Models\Uuims;
 use App\Uuims\Models\Dept;
 use App\Uuims\Services\PermissionService;
 use App\Uuims\Services\TokenService;
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use App\Uuims\Support\Api;
 use App\Uuims\Support\ApiException;
 use App\Uuims\Support\Validator;
@@ -17,10 +17,10 @@ use Loongs\Http\Response;
 use Loongs\Orm\Orm;
 
 /**
- * Admin CRUD. Row-level data scope comes from the Admin model's global scope (out-of-scope rows are
+ * Uuims CRUD. Row-level data scope comes from the Uuims model's global scope (out-of-scope rows are
  * invisible → 404); field permissions from HasFieldPermissions (toArray / fill).
  */
-final class AdminController
+final class UuimsController
 {
     private const LABELS = ['username' => '用户名', 'password' => '密码', 'nickname' => '昵称', 'mobile' => '手机号',
         'email' => '邮箱', 'dept_id' => '部门', 'status' => '状态', 'role_ids' => '角色'];
@@ -33,7 +33,7 @@ final class AdminController
     public function index(Request $request): Response
     {
         [$page, $size] = Api::pagination($request);
-        $q = Admin::query();
+        $q = Uuims::query();
         $kw = trim((string) $request->query('keyword', ''));
         if ($kw !== '') {
             $q->where(static fn ($w) => $w->where('username', 'like', "%{$kw}%")->orWhere('nickname', 'like', "%{$kw}%"));
@@ -57,7 +57,7 @@ final class AdminController
         $roles = $this->rolesOf($ids);
         $depts = $deptIds === [] ? [] : Orm::table('depts')->whereIn('id', array_unique($deptIds))->pluck('name', 'id')->all();
 
-        return Api::page($p, static fn (Admin $a): array => $a->toArray() + [
+        return Api::page($p, static fn (Uuims $a): array => $a->toArray() + [
             'dept_name' => $depts[(int) $a->dept_id] ?? null,
             'roles' => $roles[(int) $a->id] ?? [],
         ], ['fields' => $this->fieldPerms()]);
@@ -65,11 +65,11 @@ final class AdminController
 
     public function show(Request $request): Response
     {
-        $admin = $this->find(Api::id($request));
+        $uuims = $this->find(Api::id($request));
 
-        return Api::ok($admin->toArray() + [
-            'roles' => $this->rolesOf([(int) $admin->id])[(int) $admin->id] ?? [],
-            'role_ids' => array_map(static fn (array $r): int => $r['id'], $this->rolesOf([(int) $admin->id])[(int) $admin->id] ?? []),
+        return Api::ok($uuims->toArray() + [
+            'roles' => $this->rolesOf([(int) $uuims->id])[(int) $uuims->id] ?? [],
+            'role_ids' => array_map(static fn (array $r): int => $r['id'], $this->rolesOf([(int) $uuims->id])[(int) $uuims->id] ?? []),
             'fields' => $this->fieldPerms(),
         ]);
     }
@@ -88,39 +88,39 @@ final class AdminController
             'role_ids' => 'array',
         ], self::LABELS);
         $this->assertDept($in['dept_id'] ?? null);
-        if (Admin::query()->withoutGlobalScope('data_scope')->where('username', $in['username'])->exists()) {
+        if (Uuims::query()->withoutGlobalScope('data_scope')->where('username', $in['username'])->exists()) {
             throw ApiException::conflict('用户名已存在');
         }
         $roleIds = Validator::ids($in['role_ids'] ?? []);
         $this->assertAssignable($roleIds);
 
-        $admin = Orm::transaction(function () use ($in, $input, $roleIds): Admin {
-            $admin = new Admin();
+        $uuims = Orm::transaction(function () use ($in, $input, $roleIds): Uuims {
+            $uuims = new Uuims();
             // fill() applies field permissions to the raw client input (non-editable fields → 403)
-            $admin->fill(array_intersect_key($input, array_flip(['mobile', 'email'])) + [
+            $uuims->fill(array_intersect_key($input, array_flip(['mobile', 'email'])) + [
                 'username' => $in['username'],
                 'nickname' => $in['nickname'] ?? $in['username'],
                 'dept_id' => $in['dept_id'] ?? null,
                 'status' => $in['status'] ?? 1,
             ]);
-            $admin->forceFill([
-                'password' => Admin::hashPassword($in['password']),
+            $uuims->forceFill([
+                'password' => Uuims::hashPassword($in['password']),
                 'password_changed_at' => date('Y-m-d H:i:s'),
                 'is_super' => 0,
-                'created_by' => AdminContext::id(),
+                'created_by' => UuimsContext::id(),
             ])->save();
-            $this->syncRoles((int) $admin->id, $roleIds);
+            $this->syncRoles((int) $uuims->id, $roleIds);
 
-            return $admin;
+            return $uuims;
         });
 
-        return Api::ok(['id' => (int) $admin->id], '创建成功');
+        return Api::ok(['id' => (int) $uuims->id], '创建成功');
     }
 
     public function update(Request $request): Response
     {
-        $admin = $this->find(Api::id($request));
-        $this->assertNotProtected($admin);
+        $uuims = $this->find(Api::id($request));
+        $this->assertNotProtected($uuims);
         $input = Api::input($request);
         $in = Validator::check($input, [
             'nickname' => 'string|max:64',
@@ -130,54 +130,54 @@ final class AdminController
             'status' => 'int|in:0,1',
             'role_ids' => 'array',
         ], self::LABELS);
-        if (array_key_exists('dept_id', $in) && (int) $in['dept_id'] !== (int) $admin->dept_id) {
+        if (array_key_exists('dept_id', $in) && (int) $in['dept_id'] !== (int) $uuims->dept_id) {
             $this->assertDept($in['dept_id']);
         }
-        if ((int) $admin->id === AdminContext::id() && isset($in['status']) && (int) $in['status'] === 0) {
+        if ((int) $uuims->id === UuimsContext::id() && isset($in['status']) && (int) $in['status'] === 0) {
             throw ApiException::conflict('不能停用自己');
         }
         $roleIds = array_key_exists('role_ids', $in) ? Validator::ids($in['role_ids']) : null;
         if ($roleIds !== null) {
-            $this->assertAssignable($roleIds, (int) $admin->id);
+            $this->assertAssignable($roleIds, (int) $uuims->id);
         }
-        $disabled = isset($in['status']) && (int) $in['status'] === 0 && (int) $admin->status === 1;
+        $disabled = isset($in['status']) && (int) $in['status'] === 0 && (int) $uuims->status === 1;
 
-        Orm::transaction(function () use ($admin, $in, $input, $roleIds): void {
+        Orm::transaction(function () use ($uuims, $in, $input, $roleIds): void {
             $attrs = array_intersect_key($in, array_flip(['nickname', 'dept_id', 'status']));
             foreach (['mobile', 'email'] as $f) {
                 if (array_key_exists($f, $input)) {
                     $attrs[$f] = $input[$f];
                 }
             }
-            $admin->fill($attrs)->save();
+            $uuims->fill($attrs)->save();
             if ($roleIds !== null) {
-                $this->syncRoles((int) $admin->id, $roleIds);
+                $this->syncRoles((int) $uuims->id, $roleIds);
             }
         });
         $this->permissions->flush();
         if ($disabled) {
-            TokenService::revokeAll((int) $admin->id);
+            TokenService::revokeAll((int) $uuims->id);
         }
 
-        return Api::ok(['id' => (int) $admin->id], '保存成功');
+        return Api::ok(['id' => (int) $uuims->id], '保存成功');
     }
 
     public function destroy(Request $request): Response
     {
-        $admin = $this->find(Api::id($request));
-        if ($admin->is_super) {
+        $uuims = $this->find(Api::id($request));
+        if ($uuims->is_super) {
             throw ApiException::forbidden('超级管理员不能删除', 40305);
         }
-        if ((int) $admin->id === AdminContext::id()) {
+        if ((int) $uuims->id === UuimsContext::id()) {
             throw ApiException::conflict('不能删除自己');
         }
-        Orm::transaction(static function () use ($admin): void {
-            Orm::table('admin_role')->where('admin_id', $admin->id)->delete();
-            Orm::table('admin_wechat')->where('admin_id', $admin->id)->delete();
-            Orm::table('admin_messages')->where('admin_id', $admin->id)->delete();   // P5 inbox (table from uuims:install)
-            $admin->delete();
+        Orm::transaction(static function () use ($uuims): void {
+            Orm::table('user_role')->where('user_id', $uuims->id)->delete();
+            Orm::table('user_wechat')->where('user_id', $uuims->id)->delete();
+            Orm::table('user_messages')->where('user_id', $uuims->id)->delete();   // P5 inbox (table from uuims:install)
+            $uuims->delete();
         });
-        TokenService::revokeAll((int) $admin->id);
+        TokenService::revokeAll((int) $uuims->id);
         $this->permissions->flush();
 
         return Api::ok(null, '删除成功');
@@ -185,23 +185,23 @@ final class AdminController
 
     public function resetPassword(Request $request): Response
     {
-        $admin = $this->find(Api::id($request));
-        $this->assertNotProtected($admin);
+        $uuims = $this->find(Api::id($request));
+        $this->assertNotProtected($uuims);
         $in = Validator::check(Api::input($request), ['password' => 'required|string|min:8|max:72'], self::LABELS);
-        $admin->forceFill(['password' => Admin::hashPassword($in['password']), 'password_changed_at' => date('Y-m-d H:i:s')])->save();
-        $revoked = TokenService::revokeAll((int) $admin->id);
+        $uuims->forceFill(['password' => Uuims::hashPassword($in['password']), 'password_changed_at' => date('Y-m-d H:i:s')])->save();
+        $revoked = TokenService::revokeAll((int) $uuims->id);
 
         return Api::ok(['revoked_tokens' => $revoked], '密码已重置');
     }
 
-    private function find(int $id): Admin
+    private function find(int $id): Uuims
     {
-        return Admin::query()->find($id) ?? throw ApiException::notFound();
+        return Uuims::query()->find($id) ?? throw ApiException::notFound();
     }
 
-    private function assertNotProtected(Admin $admin): void
+    private function assertNotProtected(Uuims $uuims): void
     {
-        if ($admin->is_super && !AdminContext::isSuper()) {
+        if ($uuims->is_super && !UuimsContext::isSuper()) {
             throw ApiException::forbidden('不能修改超级管理员', 40305);
         }
     }
@@ -211,12 +211,12 @@ final class AdminController
         if ($deptId !== null && Dept::query()->find($deptId) === null) {
             throw ApiException::validation(['dept_id' => '部门不存在']);
         }
-        if (!Admin::deptInScope($deptId)) {
+        if (!Uuims::deptInScope($deptId)) {
             throw ApiException::forbidden('该部门不在你的数据权限范围内', 40303);
         }
     }
 
-    /** Non-super admins may only assign roles they hold themselves (no privilege escalation). @param list<int> $roleIds */
+    /** Non-super users may only assign roles they hold themselves (no privilege escalation). @param list<int> $roleIds */
     private function assertAssignable(array $roleIds, ?int $targetId = null): void
     {
         if ($roleIds === []) {
@@ -226,46 +226,46 @@ final class AdminController
         if (count($found) !== count($roleIds)) {
             throw ApiException::validation(['role_ids' => '角色不存在']);
         }
-        if (!AdminContext::isSuper()) {
-            $current = $targetId === null ? [] : array_map('intval', Orm::table('admin_role')->where('admin_id', $targetId)->pluck('role_id')->all());
+        if (!UuimsContext::isSuper()) {
+            $current = $targetId === null ? [] : array_map('intval', Orm::table('user_role')->where('user_id', $targetId)->pluck('role_id')->all());
             $new = array_diff($roleIds, $current);
-            if (array_diff($new, AdminContext::require()['role_ids']) !== []) {
+            if (array_diff($new, UuimsContext::require()['role_ids']) !== []) {
                 throw ApiException::forbidden('只能分配自己拥有的角色', 40304);
             }
         }
     }
 
     /** @param list<int> $roleIds */
-    private function syncRoles(int $adminId, array $roleIds): void
+    private function syncRoles(int $userId, array $roleIds): void
     {
-        Orm::table('admin_role')->where('admin_id', $adminId)->delete();
+        Orm::table('user_role')->where('user_id', $userId)->delete();
         if ($roleIds !== []) {
-            Orm::table('admin_role')->insert(array_map(static fn (int $r): array => ['admin_id' => $adminId, 'role_id' => $r], $roleIds));
+            Orm::table('user_role')->insert(array_map(static fn (int $r): array => ['user_id' => $userId, 'role_id' => $r], $roleIds));
         }
     }
 
     /**
-     * @param list<int> $adminIds
+     * @param list<int> $userIds
      * @return array<int, list<array{id: int, name: string}>>
      */
-    private function rolesOf(array $adminIds): array
+    private function rolesOf(array $userIds): array
     {
-        if ($adminIds === []) {
+        if ($userIds === []) {
             return [];
         }
         $out = [];
-        $rows = Orm::table('admin_role')->join('roles', 'roles.id', '=', 'admin_role.role_id')
-            ->whereIn('admin_role.admin_id', $adminIds)->select('admin_role.admin_id', 'roles.id', 'roles.name')->get()->all();
+        $rows = Orm::table('user_role')->join('roles', 'roles.id', '=', 'user_role.role_id')
+            ->whereIn('user_role.user_id', $userIds)->select('user_role.user_id', 'roles.id', 'roles.name')->get()->all();
         foreach ($rows as $r) {
-            $out[(int) $r['admin_id']][] = ['id' => (int) $r['id'], 'name' => (string) $r['name']];
+            $out[(int) $r['user_id']][] = ['id' => (int) $r['id'], 'name' => (string) $r['name']];
         }
 
         return $out;
     }
 
-    /** @return array<string, string> field => perm for the "admin" resource */
+    /** @return array<string, string> field => perm for the "uuims" resource */
     private function fieldPerms(): array
     {
-        return AdminContext::require()['fields']['admin'] ?? [];
+        return UuimsContext::require()['fields']['uuims'] ?? [];
     }
 }

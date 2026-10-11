@@ -21,10 +21,10 @@ $router->get('/uuims/web/index.html', static fn (): Response => (new Response())
 $router->get('/uuims/h5/index.html', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/h5/'));
 
 // Temporary compatibility redirects (remove after one release)
-$router->get('/admin', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims'));
-$router->get('/admin/web', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/web/'));
-$router->get('/admin/h5', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/h5/'));
-$router->get('/admin/web/', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/web/'));
-$router->get('/admin/h5/', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/h5/'));
-$router->get('/admin/web/index.html', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/web/'));
-$router->get('/admin/h5/index.html', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/h5/'));
+$router->get('/uuims', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims'));
+$router->get('/uuims/web', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/web/'));
+$router->get('/uuims/h5', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/h5/'));
+$router->get('/uuims/web/', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/web/'));
+$router->get('/uuims/h5/', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/h5/'));
+$router->get('/uuims/web/index.html', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/web/'));
+$router->get('/uuims/h5/index.html', static fn (): Response => (new Response())->status(302)->header('Location', '/uuims/h5/'));

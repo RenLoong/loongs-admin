@@ -7,7 +7,7 @@ namespace App\Uuims\Modules\System\Controller;
 use App\Uuims\Models\Dept;
 use App\Uuims\Models\Role;
 use App\Uuims\Services\PermissionService;
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use App\Uuims\Support\Api;
 use App\Uuims\Support\ApiException;
 use App\Uuims\Support\I18n;
@@ -19,7 +19,7 @@ use Loongs\Orm\Orm;
 /**
  * Roles with their grants: permission codes (menus / buttons of the merged apps/*\/menu.json, table
  * role_permission), data scope (all | custom | dept_and_child | dept | self)
- * and field permissions ({field_id: hidden|masked|readonly|editable}). Non-super admins cannot grant
+ * and field permissions ({field_id: hidden|masked|readonly|editable}). Non-super users cannot grant
  * more than they have (permission codes, data scope, field permissions).
  */
 final class RoleController
@@ -47,14 +47,14 @@ final class RoleController
         $scopes = $ids === [] ? [] : Orm::table('role_data_scope')->whereIn('role_id', $ids)->pluck('scope', 'role_id')->all();
         $counts = [];
         if ($ids !== []) {
-            foreach (Orm::table('admin_role')->whereIn('role_id', $ids)->get()->all() as $row) {
+            foreach (Orm::table('user_role')->whereIn('role_id', $ids)->get()->all() as $row) {
                 $counts[(int) $row['role_id']] = ($counts[(int) $row['role_id']] ?? 0) + 1;
             }
         }
 
         return Api::page($p, static fn (Role $r): array => $r->toArray() + [
             'data_scope' => $scopes[(int) $r->id] ?? 'self',
-            'admin_count' => $counts[(int) $r->id] ?? 0,
+            'user_count' => $counts[(int) $r->id] ?? 0,
         ]);
     }
 
@@ -78,7 +78,7 @@ final class RoleController
             throw ApiException::conflict('角色编码已存在');
         }
         $role = Orm::transaction(function () use ($in, $grants): Role {
-            $role = Role::query()->create($in + ['created_by' => AdminContext::id()]);
+            $role = Role::query()->create($in + ['created_by' => UuimsContext::id()]);
             $this->saveGrants((int) $role->id, $grants);
 
             return $role;
@@ -108,7 +108,7 @@ final class RoleController
     {
         $role = Role::query()->find(Api::id($request)) ?? throw ApiException::notFound();
         Orm::transaction(static function () use ($role): void {
-            foreach (['admin_role', 'role_permission', 'role_data_scope', 'role_field'] as $t) {
+            foreach (['user_role', 'role_permission', 'role_data_scope', 'role_field'] as $t) {
                 Orm::table($t)->where('role_id', $role->id)->delete();
             }
             $role->delete();
@@ -131,7 +131,7 @@ final class RoleController
             'status' => 'int|in:0,1',
             'remark' => 'nullable|string|max:255',
         ], ['code' => '角色编码', 'name' => '角色名称', 'sort' => '排序', 'status' => '状态', 'remark' => '备注']);
-        $ctx = AdminContext::require();
+        $ctx = UuimsContext::require();
         $grants = [];
 
         if (array_key_exists('permissions', $input)) {

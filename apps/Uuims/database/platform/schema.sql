@@ -1,4 +1,4 @@
--- admin_platform schema (idempotent; `./loongs uuims:install` runs every statement).
+-- user_platform schema (idempotent; `./loongs uuims:install` runs every statement).
 -- {{prefix}} is replaced with the connection's table prefix (default lgs_ from DB_PREFIX / ORM).
 
 CREATE TABLE IF NOT EXISTS `{{prefix}}depts` (
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}depts` (
   KEY `idx_parent` (`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='departments';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}admins` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(64) NOT NULL,
   `password` VARCHAR(255) NOT NULL COMMENT 'password_hash argon2id',
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}admins` (
   `email` VARCHAR(128) NULL,
   `dept_id` INT UNSIGNED NULL,
   `status` TINYINT NOT NULL DEFAULT 1 COMMENT '1 enabled, 0 disabled',
-  `is_super` TINYINT NOT NULL DEFAULT 0 COMMENT 'super admin: bypasses RBAC, cannot be deleted',
+  `is_super` TINYINT NOT NULL DEFAULT 0 COMMENT 'super uuims: bypasses RBAC, cannot be deleted',
   `last_login_at` DATETIME NULL,
   `last_login_ip` VARCHAR(45) NULL,
   `password_changed_at` DATETIME NULL,
@@ -52,23 +52,23 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}roles` (
   UNIQUE KEY `uk_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='roles';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}admin_role` (
-  `admin_id` INT UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS `{{prefix}}user_role` (
+  `user_id` INT UNSIGNED NOT NULL,
   `role_id` INT UNSIGNED NOT NULL,
-  PRIMARY KEY (`admin_id`, `role_id`),
+  PRIMARY KEY (`user_id`, `role_id`),
   KEY `idx_role` (`role_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='admin <-> role';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='uuims <-> role';
 
 CREATE TABLE IF NOT EXISTS `{{prefix}}role_permission` (
   `role_id` INT UNSIGNED NOT NULL,
-  `code` VARCHAR(128) NOT NULL COMMENT 'permission code of a menu/button in apps/*/menu.json, e.g. system:admin:create',
+  `code` VARCHAR(128) NOT NULL COMMENT 'permission code of a menu/button in apps/*/menu.json, e.g. system:uuims:create',
   PRIMARY KEY (`role_id`, `code`),
   KEY `idx_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='role -> permission code (menus live in apps/*/menu.json)';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}admin_wechat` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}user_wechat` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `admin_id` INT UNSIGNED NOT NULL,
+  `user_id` INT UNSIGNED NOT NULL,
   `appid` VARCHAR(64) NOT NULL COMMENT 'mini program AppID',
   `openid` VARCHAR(128) NOT NULL,
   `unionid` VARCHAR(128) NULL,
@@ -76,8 +76,8 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}admin_wechat` (
   `last_login_at` DATETIME NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_app_openid` (`appid`, `openid`),
-  UNIQUE KEY `uk_admin_app` (`admin_id`, `appid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='admin <-> WeChat mini program openid';
+  UNIQUE KEY `uk_user_app` (`user_id`, `appid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='uuims <-> WeChat mini program openid';
 
 CREATE TABLE IF NOT EXISTS `{{prefix}}role_data_scope` (
   `role_id` INT UNSIGNED NOT NULL,
@@ -106,10 +106,10 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}role_field` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='role field permission';
 
 -- P5 站内消息 (in-app messages, one row per recipient; no push yet). Sent by App\Uuims\Services\MessageService.
-CREATE TABLE IF NOT EXISTS `{{prefix}}admin_messages` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}user_messages` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `admin_id` INT UNSIGNED NOT NULL COMMENT 'recipient (admins.id)',
-  `sender_id` INT UNSIGNED NULL COMMENT 'sender admin id, NULL = system',
+  `user_id` INT UNSIGNED NOT NULL COMMENT 'recipient (users.id)',
+  `sender_id` INT UNSIGNED NULL COMMENT 'sender uuims id, NULL = system',
   `title` VARCHAR(128) NOT NULL,
   `content` TEXT NULL,
   `level` VARCHAR(16) NOT NULL DEFAULT 'info' COMMENT 'info | success | warning | error',
@@ -117,6 +117,6 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}admin_messages` (
   `read_at` DATETIME NULL,
   `created_at` DATETIME NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_admin_read` (`admin_id`, `read_at`),
-  KEY `idx_admin_created` (`admin_id`, `created_at`)
+  KEY `idx_user_read` (`user_id`, `read_at`),
+  KEY `idx_user_created` (`user_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='in-app messages per administrator';

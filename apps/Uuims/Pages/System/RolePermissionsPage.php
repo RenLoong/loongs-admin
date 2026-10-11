@@ -16,7 +16,7 @@ use Loongs\Render\Support\Options;
  * (lib/features/system/role_permission_editor.dart) edits the menu / button permission tree, the data
  * scope (with the custom department tree) and the field permissions of one role (?id=), then saves them
  * with a partial PUT /uuims/api/system/roles/{id} {permissions, data_scope, field_perms}. The server
- * still checks every grant (cannot grant more than the current admin has).
+ * still checks every grant (cannot grant more than the current uuims has).
  */
 #[AsPage('uuims.system.role-permissions', permission: 'system:role:update')]
 final class RolePermissionsPage extends CustomPage

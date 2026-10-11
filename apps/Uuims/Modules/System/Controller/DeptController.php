@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Uuims\Modules\System\Controller;
 
-use App\Uuims\Models\Admin;
+use App\Uuims\Models\Uuims;
 use App\Uuims\Models\Dept;
 use App\Uuims\Services\PermissionService;
-use App\Uuims\Support\AdminContext;
+use App\Uuims\Support\UuimsContext;
 use App\Uuims\Support\Api;
 use App\Uuims\Support\ApiException;
 use App\Uuims\Support\Tree;
@@ -43,7 +43,7 @@ final class DeptController
     {
         $in = $this->validate(Api::input($request));
         $in['ancestors'] = $this->ancestorsFor((int) $in['parent_id']);
-        $dept = Dept::query()->create($in + ['created_by' => AdminContext::id()]);
+        $dept = Dept::query()->create($in + ['created_by' => UuimsContext::id()]);
         $this->permissions->flush();
 
         return Api::ok(['id' => (int) $dept->id], '创建成功');
@@ -86,7 +86,7 @@ final class DeptController
         if (Dept::query()->where('parent_id', $dept->id)->exists()) {
             throw ApiException::conflict('请先删除下级部门');
         }
-        if (Admin::query()->withoutGlobalScope('data_scope')->where('dept_id', $dept->id)->exists()) {
+        if (Uuims::query()->withoutGlobalScope('data_scope')->where('dept_id', $dept->id)->exists()) {
             throw ApiException::conflict('部门下还有管理员');
         }
         $dept->delete();
@@ -113,10 +113,10 @@ final class DeptController
         if ($in['parent_id'] > 0 && Dept::query()->find($in['parent_id']) === null) {
             throw ApiException::validation(['parent_id' => '上级部门不存在']);
         }
-        if ($in['parent_id'] === 0 && !AdminContext::isSuper()) {
+        if ($in['parent_id'] === 0 && !UuimsContext::isSuper()) {
             throw ApiException::forbidden('只有超级管理员可以创建顶级部门', 40303);
         }
-        if ($in['parent_id'] > 0 && !Admin::deptInScope($in['parent_id'])) {
+        if ($in['parent_id'] > 0 && !Uuims::deptInScope($in['parent_id'])) {
             throw ApiException::forbidden('上级部门不在你的数据权限范围内', 40303);
         }
 

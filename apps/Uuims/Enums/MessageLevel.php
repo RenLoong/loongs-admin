@@ -6,7 +6,7 @@ namespace App\Uuims\Enums;
 
 use Loongs\Render\Contract\OptionEnum;
 
-/** admin_messages.level — 站内消息级别 (P5). */
+/** user_messages.level — 站内消息级别 (P5). */
 enum MessageLevel: string implements OptionEnum
 {
     case Info = 'info';

@@ -6,7 +6,7 @@ namespace App\Uuims\Services;
 
 /**
  * Login form support (Redis): one-time form nonce bound to a captcha, and per-username failure
- * counter with temporary lock. Keys: admin:login:nonce:<nonce>, admin:login:fail:<username>.
+ * counter with temporary lock. Keys: uuims:login:nonce:<nonce>, uuims:login:fail:<username>.
  */
 final class LoginGuard
 {
@@ -30,7 +30,7 @@ final class LoginGuard
             $code .= self::CHARS[random_int(0, strlen(self::CHARS) - 1)];
         }
         $nonce = bin2hex(random_bytes(16));
-        redis()->run(fn (\Redis $r) => $r->setex('admin:login:nonce:' . $nonce, $this->captchaTtl, $code));
+        redis()->run(fn (\Redis $r) => $r->setex('uuims:login:nonce:' . $nonce, $this->captchaTtl, $code));
 
         $out = ['nonce' => $nonce, 'svg' => self::svg($code)];
         if ($png) {
@@ -47,7 +47,7 @@ final class LoginGuard
             return 'expired';
         }
         $code = redis()->run(static function (\Redis $r) use ($nonce): mixed {
-            $k = 'admin:login:nonce:' . $nonce;
+            $k = 'uuims:login:nonce:' . $nonce;
             $v = $r->get($k);
             $r->del($k);
 
@@ -92,7 +92,7 @@ final class LoginGuard
 
     private static function failKey(string $username): string
     {
-        return 'admin:login:fail:' . hash('sha256', strtolower(trim($username)));
+        return 'uuims:login:fail:' . hash('sha256', strtolower(trim($username)));
     }
 
     /** 120×40 PNG (GD, built-in font drawn at half size, scaled up, with noise). */

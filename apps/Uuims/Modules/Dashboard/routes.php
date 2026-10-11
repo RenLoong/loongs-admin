@@ -11,9 +11,9 @@ use App\Uuims\Modules\Dashboard\Controller\OverviewController as O;
 $api = '/uuims/api/dashboard/overview';
 $need = [P::need('dashboard:overview')];
 $router->get("$api/stats", [O::class, 'stats'], $need);
-$router->get("$api/admin-trend", [O::class, 'adminTrend'], $need);
-$router->get("$api/admin-status", [O::class, 'adminStatus'], $need);
-$router->get("$api/dept-admins", [O::class, 'deptAdmins'], $need);
+$router->get("$api/uuims-trend", [O::class, 'uuimsTrend'], $need);
+$router->get("$api/uuims-status", [O::class, 'uuimsStatus'], $need);
+$router->get("$api/dept-users", [O::class, 'deptUsers'], $need);
 
 // SAMPLE series (tenant module arrives in P2): fixed data from App\Uuims\Samples\SampleTenants.
 $s = '/uuims/api/samples/overview';

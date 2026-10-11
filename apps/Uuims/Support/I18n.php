@@ -9,7 +9,7 @@ use Loongs\Language\Lang;
 use Loongs\Language\Translator;
 
 /**
- * Admin i18n on top of loongs/language (README §19).
+ * Uuims i18n on top of loongs/language (README §19).
  *
  *  - Default / fallback locale: en-US. A request with no Accept-Language is English.
  *    Keys stay the Chinese source texts ("gettext style"). zh-CN has its own pack

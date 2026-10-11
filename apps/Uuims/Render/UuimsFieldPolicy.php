@@ -11,9 +11,9 @@ use Loongs\Render\PageContext;
 /**
  * Field permissions of the P1 permission context (resource_fields + role_field, broadest role wins,
  * already merged by PermissionService): hidden → removed, masked → masked + read-only, readonly →
- * read-only. Super admin and uncontrolled fields are editable.
+ * read-only. Super uuims and uncontrolled fields are editable.
  */
-final class AdminFieldPolicy implements FieldPolicy
+final class UuimsFieldPolicy implements FieldPolicy
 {
     public function access(string $resource, string $field, PageContext $ctx): FieldAccess
     {
