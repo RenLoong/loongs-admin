@@ -1,5 +1,5 @@
 -- admin_platform schema (idempotent; `./loongs uuims:install` runs every statement).
--- {{prefix}} is replaced with the connection's table prefix (empty by default).
+-- {{prefix}} is replaced with the connection's table prefix (default lgs_ from DB_PREFIX / ORM).
 
 CREATE TABLE IF NOT EXISTS `{{prefix}}depts` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
