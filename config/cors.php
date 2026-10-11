@@ -6,13 +6,13 @@ declare(strict_types=1);
  * CORS for browser clients (Flutter web, uni-app H5). Applied globally by
  * Server\Http\Middleware\CorsMiddleware (registered in routes/cors.php).
  *
- * CORS_ALLOWED_ORIGINS: comma-separated exact origins, or * (dev only). ADMIN_WEB_ORIGINS (the origins
- * serving the admin web build, see config/admin.php) are always added.
+ * CORS_ALLOWED_ORIGINS: comma-separated exact origins, or * (dev only). UUIMS_WEB_ORIGINS (the origins
+ * serving the admin web build, see config/uuims.php) are always added.
  */
 $list = static fn (string $key, string $default = ''): array => array_values(array_filter(array_map('trim', explode(',', (string) env($key, $default)))));
 
 return [
-    'allowed_origins' => array_values(array_unique(array_merge($list('CORS_ALLOWED_ORIGINS', '*'), array_map(static fn (string $o): string => rtrim($o, '/'), $list('ADMIN_WEB_ORIGINS'))))),
+    'allowed_origins' => array_values(array_unique(array_merge($list('CORS_ALLOWED_ORIGINS', '*'), array_map(static fn (string $o): string => rtrim($o, '/'), $list('UUIMS_WEB_ORIGINS'))))),
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     'allowed_headers' => ['Authorization', 'Content-Type', 'Accept', 'X-Requested-With', 'X-Request-Id', 'api-version',
         // loongs/render page descriptions (RENDER.md §2.1, §4.5)
