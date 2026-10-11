@@ -15,3 +15,7 @@ $router->get('/admin', $send);
 
 $router->get('/admin/web', static fn (): Response => ClientEntry::page('web'));
 $router->get('/admin/h5', static fn (): Response => ClientEntry::page('h5'));
+
+// Old bookmarks / direct static hit: do not serve uninjected shell.
+$router->get('/admin/web/index.html', static fn (): Response => (new Response())->status(302)->header('Location', '/admin/web/'));
+$router->get('/admin/h5/index.html', static fn (): Response => (new Response())->status(302)->header('Location', '/admin/h5/'));
