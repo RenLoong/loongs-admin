@@ -24,5 +24,10 @@
     "prefer-stable": true,
     "config": {
         "sort-packages": true
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@php bin/publish-loongs-configs.php"
+        ]
     }
 }
