@@ -8,31 +8,32 @@ use App\Uuims\Support\OAuth;
 use Loongs\Console\Command;
 use Loongs\OAuth\Storage\OrmStorage;
 use Loongs\Orm\Orm;
+use Loongs\Orm\Support\DatabaseEnsurer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * ./loongs uuims:install [--username=admin] [--reset-password]
+ * ./loongs uuims:install [--username=uuims] [--reset-password]
  *
- * Idempotent platform install on the default connection (admin_platform):
+ * Idempotent platform install on the default connection (user_platform):
  *   1. OAUTH_TOKEN_PEPPER in .env (generated once, never printed)
  *   2. platform tables (database/platform/schema.sql, CREATE TABLE IF NOT EXISTS)
  *   3. loongs/oauth tables (OrmStorage::installOn, same as ./loongs oauth:install)
  *   4. seed: departments, controllable fields (menus + buttons are files: apps/<App>/menu.json)
  *   4b. upgrade from the menus table (≤ P1): role_menu grants → role_permission codes, then drop
  *       role_menu + menus
- *   5. super admin with a random password → runtime/admin_initial_password (0600, never echoed)
+ *   5. super uuims with a random password → runtime/user_initial_password (0600, never echoed)
  *   6. public OAuth clients from config/uuims.php (uuims-pc, uuims-mobile; upsert)
  */
-#[AsCommand(name: 'uuims:install', description: 'Create/upgrade admin_platform tables, seed depts, super admin and OAuth clients (idempotent)')]
+#[AsCommand(name: 'uuims:install', description: 'Create/upgrade user_platform tables, seed depts, super uuims and OAuth clients (idempotent)')]
 final class InstallCommand extends Command
 {
     protected function configure(): void
     {
-        $this->addOption('username', null, InputOption::VALUE_REQUIRED, 'Super admin username', 'admin')
-            ->addOption('reset-password', null, InputOption::VALUE_NONE, 'Generate a new password for the existing super admin');
+        $this->addOption('username', null, InputOption::VALUE_REQUIRED, 'Super uuims username', 'uuims')
+            ->addOption('reset-password', null, InputOption::VALUE_NONE, 'Generate a new password for the existing super uuims');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -47,10 +48,21 @@ final class InstallCommand extends Command
         $db = (static fn (): mixed => require $base . '/config/database.php')();
         Orm::configure(is_array($db) ? $db : []);
         $conn = (string) ($db['default'] ?? 'mysql');
-        $c = Orm::connection($conn);
-        $prefix = Orm::config($conn)->prefix();
 
         try {
+            $ensured = DatabaseEnsurer::ensureExists($conn);
+            if (!$ensured['ok']) {
+                $io->error($ensured['message']);
+
+                return self::FAILURE;
+            }
+            if ($ensured['created']) {
+                $rows[] = ['database ' . $ensured['database'], 'created'];
+            }
+
+            $c = Orm::connection($conn);
+            $prefix = Orm::config($conn)->prefix();
+
             $sql = str_replace('{{prefix}}', $prefix, (string) file_get_contents($base . '/apps/Uuims/database/platform/schema.sql'));
             $sql = (string) preg_replace('/^\s*--.*$/m', '', $sql);
             foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
@@ -71,11 +83,11 @@ final class InstallCommand extends Command
                 $rows[] = $row;
             }
             $rows[] = ['seed resource_fields', $this->seedFields() . ' new'];
-            $rows[] = ['super admin', $this->superAdmin($base, (string) $input->getOption('username'), (bool) $input->getOption('reset-password'))];
+            $rows[] = ['super uuims', $this->superUuims($base, (string) $input->getOption('username'), (bool) $input->getOption('reset-password'))];
 
-            $adminCfg = (static fn (): mixed => require $base . '/config/uuims.php')();
+            $uuimsCfg = (static fn (): mixed => require $base . '/config/uuims.php')();
             $storage = new OrmStorage($conn);
-            foreach (OAuth::clients((array) $adminCfg['oauth']) as $client) {
+            foreach (OAuth::clients((array) $uuimsCfg['oauth']) as $client) {
                 $storage->saveClient($client);
                 $rows[] = ["oauth client {$client->id}", 'public, PKCE S256, redirect: ' . implode(' ', $client->redirectUris)];
             }
@@ -87,7 +99,7 @@ final class InstallCommand extends Command
 
         $io->writeln('uuims:install on ' . Orm::resolver()->spec($conn)->describe());
         $io->table(['step', 'result'], $rows);
-        $io->success('admin_platform ready.');
+        $io->success('user_platform ready.');
 
         return self::SUCCESS;
     }
@@ -163,16 +175,16 @@ final class InstallCommand extends Command
     private function seedFields(): int
     {
         $new = 0;
-        foreach ([['admin', 'mobile', '手机号'], ['admin', 'email', '邮箱']] as [$res, $field, $label]) {
+        foreach ([['uuims', 'mobile', '手机号'], ['uuims', 'email', '邮箱']] as [$res, $field, $label]) {
             $new += Orm::table('resource_fields')->insertOrIgnore(['resource' => $res, 'field' => $field, 'label' => $label, 'default_perm' => 'editable']);
         }
 
         return $new;
     }
 
-    private function superAdmin(string $base, string $username, bool $reset): string
+    private function superUuims(string $base, string $username, bool $reset): string
     {
-        $row = Orm::table('admins')->where('username', $username)->first();
+        $row = Orm::table('users')->where('username', $username)->first();
         if ($row !== null && !$reset) {
             return "{$username} exists (password unchanged)";
         }
@@ -185,17 +197,17 @@ final class InstallCommand extends Command
         $hash = password_hash($password, PASSWORD_ARGON2ID);
         if ($row === null) {
             $root = (int) Orm::table('depts')->where('parent_id', 0)->orderBy('id')->value('id');
-            Orm::table('admins')->insert(['username' => $username, 'password' => $hash, 'nickname' => '超级管理员', 'dept_id' => $root ?: null,
+            Orm::table('users')->insert(['username' => $username, 'password' => $hash, 'nickname' => '超级管理员', 'dept_id' => $root ?: null,
                 'status' => 1, 'is_super' => 1, 'password_changed_at' => $now, 'created_at' => $now, 'updated_at' => $now]);
         } else {
-            Orm::table('admins')->where('id', $row['id'])->update(['password' => $hash, 'password_changed_at' => $now, 'is_super' => 1, 'status' => 1, 'updated_at' => $now]);
+            Orm::table('users')->where('id', $row['id'])->update(['password' => $hash, 'password_changed_at' => $now, 'is_super' => 1, 'status' => 1, 'updated_at' => $now]);
         }
-        $file = $base . '/runtime/admin_initial_password';
+        $file = $base . '/runtime/user_initial_password';
         $old = umask(0077);
         file_put_contents($file, "username={$username}\npassword={$password}\n");
         umask($old);
         chmod($file, 0600);
 
-        return ($row === null ? 'created' : 'password reset') . ", credentials in runtime/admin_initial_password (0600)";
+        return ($row === null ? 'created' : 'password reset') . ", credentials in runtime/user_initial_password (0600)";
     }
 }
