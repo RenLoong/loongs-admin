@@ -17,3 +17,7 @@ composer.lock
 composer.dev.lock
 
 composer.dev.json
+# Mounted demo apps (absolute symlinks; local-only)
+apps/Erp
+apps/Mall
+apps/Wms
