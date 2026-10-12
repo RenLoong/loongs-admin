@@ -20,7 +20,7 @@ use Loongs\Orm\Pagination\Paginator;
  */
 final class MessageService
 {
-    public const TABLE = 'user_messages';
+    public const TABLE = 'uuims_user_messages';
 
     /**
      * @param list<int> $userIds recipients
@@ -120,7 +120,7 @@ final class MessageService
             return [];
         }
         $out = [];
-        foreach (Orm::table('users')->whereIn('id', $ids)->select('id', 'username', 'nickname')->get()->all() as $a) {
+        foreach (Orm::table('uuims_users')->whereIn('id', $ids)->select('id', 'username', 'nickname')->get()->all() as $a) {
             $out[(int) $a['id']] = (string) ($a['nickname'] !== '' && $a['nickname'] !== null ? $a['nickname'] : $a['username']);
         }
 

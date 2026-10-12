@@ -35,9 +35,9 @@ final class OverviewController
             'users' => $total,
             'users_mom' => $before > 0 ? round(($total - $before) / $before, 4) : null,
             'enabled' => count(array_filter($users, static fn (array $a): bool => $a['status'] === 1)),
-            'roles' => (int) Orm::table('roles')->count(),
-            'depts' => (int) Orm::table('depts')->count(),
-            'wechat' => $ids === [] ? 0 : (int) Orm::table('user_wechat')->whereIn('user_id', $ids)->count(),
+            'roles' => (int) Orm::table('uuims_roles')->count(),
+            'depts' => (int) Orm::table('uuims_depts')->count(),
+            'wechat' => $ids === [] ? 0 : (int) Orm::table('uuims_user_wechat')->whereIn('user_id', $ids)->count(),
         ]);
     }
 
@@ -82,7 +82,7 @@ final class OverviewController
     /** Per department (rank + stacked bar), most users first: [{name, count, enabled, disabled}]. */
     public function deptUsers(Request $request): Response
     {
-        $names = Orm::table('depts')->pluck('name', 'id')->all();
+        $names = Orm::table('uuims_depts')->pluck('name', 'id')->all();
         $by = [];
         foreach ($this->users() as $a) {
             $key = $a['dept_id'] !== null && isset($names[$a['dept_id']]) ? (string) $names[$a['dept_id']] : I18n::t('未分配部门');

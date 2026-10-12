@@ -56,7 +56,7 @@ final class DeptController
         $newParent = (int) $in['parent_id'];
         Orm::transaction(function () use ($dept, $in, $newParent): void {
             if ($newParent !== (int) $dept->parent_id) {
-                $rows = Orm::table('depts')->select('id', 'parent_id')->get()->all();
+                $rows = Orm::table('uuims_depts')->select('id', 'parent_id')->get()->all();
                 if (in_array($newParent, Tree::descendants($rows, (int) $dept->id), true)) {
                     throw ApiException::validation(['parent_id' => '不能移动到自己或下级下面']);
                 }

@@ -125,17 +125,17 @@ final class InstallCommand extends Command
         $new = 0;
         $now = date('Y-m-d H:i:s');
         $ensure = function (string $name, int $parentId, int $sort) use (&$new, $now): int {
-            $row = Orm::table('depts')->where('name', $name)->where('parent_id', $parentId)->first();
+            $row = Orm::table('uuims_depts')->where('name', $name)->where('parent_id', $parentId)->first();
             if ($row !== null) {
                 return (int) $row['id'];
             }
             $ancestors = '0';
             if ($parentId > 0) {
-                $ancestors = Orm::table('depts')->where('id', $parentId)->value('ancestors') . ',' . $parentId;
+                $ancestors = Orm::table('uuims_depts')->where('id', $parentId)->value('ancestors') . ',' . $parentId;
             }
             $new++;
 
-            return (int) Orm::table('depts')->insertGetId(['parent_id' => $parentId, 'ancestors' => $ancestors, 'name' => $name,
+            return (int) Orm::table('uuims_depts')->insertGetId(['parent_id' => $parentId, 'ancestors' => $ancestors, 'name' => $name,
                 'sort' => $sort, 'status' => 1, 'created_at' => $now, 'updated_at' => $now]);
         };
         $root = $ensure('LOONGS 平台', 0, 0);
@@ -158,7 +158,7 @@ final class InstallCommand extends Command
         $exists = static fn (string $t): bool => $c->selectOne('SELECT 1 AS x FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [$prefix . $t]) !== null;
         $rows = [];
         if ($exists('role_menu') && $exists('menus')) {
-            $n = $c->affectingStatement("INSERT IGNORE INTO `{$prefix}role_permission` (role_id, code) SELECT rm.role_id, m.perms FROM `{$prefix}role_menu` rm "
+            $n = $c->affectingStatement("INSERT IGNORE INTO `{$prefix}uuims_role_permission` (role_id, code) SELECT rm.role_id, m.perms FROM `{$prefix}role_menu` rm "
                 . "JOIN `{$prefix}menus` m ON m.id = rm.menu_id WHERE m.perms IS NOT NULL AND m.perms <> ''");
             $rows[] = ['migrate role_menu → role_permission', "{$n} grants copied"];
         }
@@ -176,7 +176,7 @@ final class InstallCommand extends Command
     {
         $new = 0;
         foreach ([['uuims', 'mobile', '手机号'], ['uuims', 'email', '邮箱']] as [$res, $field, $label]) {
-            $new += Orm::table('resource_fields')->insertOrIgnore(['resource' => $res, 'field' => $field, 'label' => $label, 'default_perm' => 'editable']);
+            $new += Orm::table('uuims_resource_fields')->insertOrIgnore(['resource' => $res, 'field' => $field, 'label' => $label, 'default_perm' => 'editable']);
         }
 
         return $new;
@@ -184,7 +184,7 @@ final class InstallCommand extends Command
 
     private function superUuims(string $base, string $username, bool $reset): string
     {
-        $row = Orm::table('users')->where('username', $username)->first();
+        $row = Orm::table('uuims_users')->where('username', $username)->first();
         if ($row !== null && !$reset) {
             return "{$username} exists (password unchanged)";
         }
@@ -196,11 +196,11 @@ final class InstallCommand extends Command
         $now = date('Y-m-d H:i:s');
         $hash = password_hash($password, PASSWORD_ARGON2ID);
         if ($row === null) {
-            $root = (int) Orm::table('depts')->where('parent_id', 0)->orderBy('id')->value('id');
-            Orm::table('users')->insert(['username' => $username, 'password' => $hash, 'nickname' => '超级管理员', 'dept_id' => $root ?: null,
+            $root = (int) Orm::table('uuims_depts')->where('parent_id', 0)->orderBy('id')->value('id');
+            Orm::table('uuims_users')->insert(['username' => $username, 'password' => $hash, 'nickname' => '超级管理员', 'dept_id' => $root ?: null,
                 'status' => 1, 'is_super' => 1, 'password_changed_at' => $now, 'created_at' => $now, 'updated_at' => $now]);
         } else {
-            Orm::table('users')->where('id', $row['id'])->update(['password' => $hash, 'password_changed_at' => $now, 'is_super' => 1, 'status' => 1, 'updated_at' => $now]);
+            Orm::table('uuims_users')->where('id', $row['id'])->update(['password' => $hash, 'password_changed_at' => $now, 'is_super' => 1, 'status' => 1, 'updated_at' => $now]);
         }
         $file = $base . '/runtime/user_initial_password';
         $old = umask(0077);

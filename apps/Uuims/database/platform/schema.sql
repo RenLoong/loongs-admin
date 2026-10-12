@@ -1,7 +1,7 @@
 -- user_platform schema (idempotent; `./loongs uuims:install` runs every statement).
 -- {{prefix}} is replaced with the connection's table prefix (default lgs_ from DB_PREFIX / ORM).
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}depts` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_depts` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `parent_id` INT UNSIGNED NOT NULL DEFAULT 0,
   `ancestors` VARCHAR(512) NOT NULL DEFAULT '0' COMMENT 'ancestor ids, comma separated, e.g. 0,1,2',
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}depts` (
   KEY `idx_parent` (`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='departments';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}users` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(64) NOT NULL,
   `password` VARCHAR(255) NOT NULL COMMENT 'password_hash argon2id',
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}users` (
   KEY `idx_dept` (`dept_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='platform administrators';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}roles` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_roles` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `code` VARCHAR(64) NOT NULL,
   `name` VARCHAR(64) NOT NULL,
@@ -52,21 +52,21 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}roles` (
   UNIQUE KEY `uk_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='roles';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}user_role` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_user_role` (
   `user_id` INT UNSIGNED NOT NULL,
   `role_id` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`user_id`, `role_id`),
   KEY `idx_role` (`role_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='uuims <-> role';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}role_permission` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_role_permission` (
   `role_id` INT UNSIGNED NOT NULL,
   `code` VARCHAR(128) NOT NULL COMMENT 'permission code of a menu/button in apps/*/menu.json, e.g. system:uuims:create',
   PRIMARY KEY (`role_id`, `code`),
   KEY `idx_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='role -> permission code (menus live in apps/*/menu.json)';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}user_wechat` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_user_wechat` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` INT UNSIGNED NOT NULL,
   `appid` VARCHAR(64) NOT NULL COMMENT 'mini program AppID',
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}user_wechat` (
   UNIQUE KEY `uk_user_app` (`user_id`, `appid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='uuims <-> WeChat mini program openid';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}role_data_scope` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_role_data_scope` (
   `role_id` INT UNSIGNED NOT NULL,
   `scope` ENUM('all','custom','dept_and_child','dept','self') NOT NULL DEFAULT 'self',
   `dept_ids` JSON NULL COMMENT 'custom scope: department ids',
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}role_data_scope` (
   PRIMARY KEY (`role_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='row-level data scope per role';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}resource_fields` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_resource_fields` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `resource` VARCHAR(64) NOT NULL,
   `field` VARCHAR(64) NOT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}resource_fields` (
   UNIQUE KEY `uk_resource_field` (`resource`, `field`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='controllable fields';
 
-CREATE TABLE IF NOT EXISTS `{{prefix}}role_field` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_role_field` (
   `role_id` INT UNSIGNED NOT NULL,
   `field_id` INT UNSIGNED NOT NULL,
   `perm` ENUM('hidden','masked','readonly','editable') NOT NULL,
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS `{{prefix}}role_field` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='role field permission';
 
 -- P5 站内消息 (in-app messages, one row per recipient; no push yet). Sent by App\Uuims\Services\MessageService.
-CREATE TABLE IF NOT EXISTS `{{prefix}}user_messages` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}uuims_user_messages` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` INT UNSIGNED NOT NULL COMMENT 'recipient (users.id)',
   `sender_id` INT UNSIGNED NULL COMMENT 'sender uuims id, NULL = system',

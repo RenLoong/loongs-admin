@@ -44,10 +44,10 @@ final class RoleController
         foreach ($p->items() as $r) {
             $ids[] = (int) $r->id;
         }
-        $scopes = $ids === [] ? [] : Orm::table('role_data_scope')->whereIn('role_id', $ids)->pluck('scope', 'role_id')->all();
+        $scopes = $ids === [] ? [] : Orm::table('uuims_role_data_scope')->whereIn('role_id', $ids)->pluck('scope', 'role_id')->all();
         $counts = [];
         if ($ids !== []) {
-            foreach (Orm::table('user_role')->whereIn('role_id', $ids)->get()->all() as $row) {
+            foreach (Orm::table('uuims_user_role')->whereIn('role_id', $ids)->get()->all() as $row) {
                 $counts[(int) $row['role_id']] = ($counts[(int) $row['role_id']] ?? 0) + 1;
             }
         }
@@ -61,7 +61,7 @@ final class RoleController
     /** Lightweight list for role pickers. */
     public function options(Request $request): Response
     {
-        return Api::ok(Orm::table('roles')->where('status', 1)->orderBy('sort')->orderBy('id')->select('id', 'code', 'name')->get()->all());
+        return Api::ok(Orm::table('uuims_roles')->where('status', 1)->orderBy('sort')->orderBy('id')->select('id', 'code', 'name')->get()->all());
     }
 
     public function show(Request $request): Response
@@ -108,7 +108,7 @@ final class RoleController
     {
         $role = Role::query()->find(Api::id($request)) ?? throw ApiException::notFound();
         Orm::transaction(static function () use ($role): void {
-            foreach (['user_role', 'role_permission', 'role_data_scope', 'role_field'] as $t) {
+            foreach (['uuims_user_role', 'uuims_role_permission', 'uuims_role_data_scope', 'uuims_role_field'] as $t) {
                 Orm::table($t)->where('role_id', $role->id)->delete();
             }
             $role->delete();
@@ -180,7 +180,7 @@ final class RoleController
         if (array_key_exists('field_perms', $input)) {
             $fp = is_array($input['field_perms']) ? $input['field_perms'] : [];
             $defs = [];
-            foreach (Orm::table('resource_fields')->get()->all() as $d) {
+            foreach (Orm::table('uuims_resource_fields')->get()->all() as $d) {
                 $defs[(int) $d['id']] = $d;
             }
             $out = [];
@@ -208,14 +208,14 @@ final class RoleController
     private function saveGrants(int $roleId, array $grants): void
     {
         if (isset($grants['permissions'])) {
-            Orm::table('role_permission')->where('role_id', $roleId)->delete();
+            Orm::table('uuims_role_permission')->where('role_id', $roleId)->delete();
             if ($grants['permissions'] !== []) {
-                Orm::table('role_permission')->insert(array_map(static fn (string $c): array => ['role_id' => $roleId, 'code' => $c], $grants['permissions']));
+                Orm::table('uuims_role_permission')->insert(array_map(static fn (string $c): array => ['role_id' => $roleId, 'code' => $c], $grants['permissions']));
             }
         }
         if (isset($grants['data_scope'])) {
-            Orm::table('role_data_scope')->where('role_id', $roleId)->delete();
-            Orm::table('role_data_scope')->insert([
+            Orm::table('uuims_role_data_scope')->where('role_id', $roleId)->delete();
+            Orm::table('uuims_role_data_scope')->insert([
                 'role_id' => $roleId,
                 'scope' => $grants['data_scope']['scope'],
                 'dept_ids' => json_encode($grants['data_scope']['dept_ids']),
@@ -223,13 +223,13 @@ final class RoleController
             ]);
         }
         if (isset($grants['field_perms'])) {
-            Orm::table('role_field')->where('role_id', $roleId)->delete();
+            Orm::table('uuims_role_field')->where('role_id', $roleId)->delete();
             $rows = [];
             foreach ($grants['field_perms'] as $fieldId => $perm) {
                 $rows[] = ['role_id' => $roleId, 'field_id' => $fieldId, 'perm' => $perm];
             }
             if ($rows !== []) {
-                Orm::table('role_field')->insert($rows);
+                Orm::table('uuims_role_field')->insert($rows);
             }
         }
     }
@@ -237,13 +237,13 @@ final class RoleController
     /** @return array<string, mixed> */
     private function grants(int $roleId): array
     {
-        $ds = Orm::table('role_data_scope')->where('role_id', $roleId)->first();
+        $ds = Orm::table('uuims_role_data_scope')->where('role_id', $roleId)->first();
         $fp = [];
-        foreach (Orm::table('role_field')->where('role_id', $roleId)->get()->all() as $row) {
+        foreach (Orm::table('uuims_role_field')->where('role_id', $roleId)->get()->all() as $row) {
             $fp[(string) $row['field_id']] = $row['perm'];
         }
 
-        $codes = array_map('strval', Orm::table('role_permission')->where('role_id', $roleId)->pluck('code')->all());
+        $codes = array_map('strval', Orm::table('uuims_role_permission')->where('role_id', $roleId)->pluck('code')->all());
         sort($codes, SORT_STRING);
         $registry = $this->permissions->registry();
 

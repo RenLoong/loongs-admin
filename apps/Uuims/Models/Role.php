@@ -8,7 +8,7 @@ use Loongs\Orm\Model\Model;
 
 final class Role extends Model
 {
-    protected string $table = 'roles';
+    protected string $table = 'uuims_roles';
     protected array $fillable = ['code', 'name', 'sort', 'status', 'remark', 'created_by'];
     protected array $casts = ['id' => 'int', 'sort' => 'int', 'status' => 'int'];
 }

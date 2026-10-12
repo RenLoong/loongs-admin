@@ -14,6 +14,6 @@ final class FieldController
 {
     public function index(Request $request): Response
     {
-        return Api::ok(Orm::table('resource_fields')->orderBy('resource')->orderBy('id')->get()->all());
+        return Api::ok(Orm::table('uuims_resource_fields')->orderBy('resource')->orderBy('id')->get()->all());
     }
 }

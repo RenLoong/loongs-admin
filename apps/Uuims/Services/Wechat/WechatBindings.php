@@ -27,13 +27,13 @@ final class WechatBindings
     /** @return array<string, mixed>|null */
     public function forUuims(int $userId): ?array
     {
-        return Orm::table('user_wechat')->where('user_id', $userId)->where('appid', $this->client->appId())->first();
+        return Orm::table('uuims_user_wechat')->where('user_id', $userId)->where('appid', $this->client->appId())->first();
     }
 
     /** @return array<string, mixed>|null */
     public function forOpenid(string $openid): ?array
     {
-        return Orm::table('user_wechat')->where('appid', $this->client->appId())->where('openid', $openid)->first();
+        return Orm::table('uuims_user_wechat')->where('appid', $this->client->appId())->where('openid', $openid)->first();
     }
 
     /**
@@ -47,15 +47,15 @@ final class WechatBindings
         $now = date('Y-m-d H:i:s');
 
         return Orm::transaction(static function () use ($userId, $s, $appId, $now): array {
-            $other = Orm::table('user_wechat')->where('appid', $appId)->where('openid', $s->openid)->first();
+            $other = Orm::table('uuims_user_wechat')->where('appid', $appId)->where('openid', $s->openid)->first();
             if ($other !== null && (int) $other['user_id'] !== $userId) {
                 throw ApiException::conflict('该微信已绑定其他管理员账号，请先在该账号中解绑');
             }
             if ($other !== null) {
                 return ['created' => false, 'bound_at' => $other['created_at']];
             }
-            Orm::table('user_wechat')->where('user_id', $userId)->where('appid', $appId)->delete();
-            Orm::table('user_wechat')->insert(['user_id' => $userId, 'appid' => $appId, 'openid' => $s->openid, 'unionid' => $s->unionid,
+            Orm::table('uuims_user_wechat')->where('user_id', $userId)->where('appid', $appId)->delete();
+            Orm::table('uuims_user_wechat')->insert(['user_id' => $userId, 'appid' => $appId, 'openid' => $s->openid, 'unionid' => $s->unionid,
                 'created_at' => $now, 'last_login_at' => null]);
 
             return ['created' => true, 'bound_at' => $now];
@@ -64,11 +64,11 @@ final class WechatBindings
 
     public function unbind(int $userId): int
     {
-        return (int) Orm::table('user_wechat')->where('user_id', $userId)->where('appid', $this->client->appId())->delete();
+        return (int) Orm::table('uuims_user_wechat')->where('user_id', $userId)->where('appid', $this->client->appId())->delete();
     }
 
     public function touch(int $id): void
     {
-        Orm::table('user_wechat')->where('id', $id)->update(['last_login_at' => date('Y-m-d H:i:s')]);
+        Orm::table('uuims_user_wechat')->where('id', $id)->update(['last_login_at' => date('Y-m-d H:i:s')]);
     }
 }

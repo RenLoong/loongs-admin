@@ -14,7 +14,7 @@ final class Uuims extends Model
     use HasDataScope;
     use HasFieldPermissions;
 
-    protected string $table = 'users';
+    protected string $table = 'uuims_users';
     protected string $fieldResource = 'uuims';
     protected array $fillable = ['username', 'password', 'nickname', 'mobile', 'email', 'dept_id', 'status', 'is_super',
         'last_login_at', 'last_login_ip', 'password_changed_at', 'created_by'];

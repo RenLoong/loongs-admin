@@ -73,9 +73,9 @@ final class PermissionService
     /** @return array<string, mixed> */
     public function build(Uuims $uuims): array
     {
-        $roles = Orm::table('user_role')->join('roles', 'roles.id', '=', 'user_role.role_id')
-            ->where('user_role.user_id', $uuims->id)->where('roles.status', 1)
-            ->select('roles.id', 'roles.code', 'roles.name')->get()->all();
+        $roles = Orm::table('uuims_user_role')->join('uuims_roles', 'uuims_roles.id', '=', 'uuims_user_role.role_id')
+            ->where('uuims_user_role.user_id', $uuims->id)->where('uuims_roles.status', 1)
+            ->select('uuims_roles.id', 'uuims_roles.code', 'uuims_roles.name')->get()->all();
         $roleIds = array_map(static fn (array $r): int => (int) $r['id'], $roles);
         $isSuper = (bool) $uuims->is_super;
 
@@ -83,7 +83,7 @@ final class PermissionService
         if ($isSuper) {
             $perms = $this->menus->codes();
         } else {
-            $granted = $roleIds === [] ? [] : Orm::table('role_permission')->whereIn('role_id', $roleIds)->pluck('code')->all();
+            $granted = $roleIds === [] ? [] : Orm::table('uuims_role_permission')->whereIn('role_id', $roleIds)->pluck('code')->all();
             $perms = array_values(array_filter(array_unique(array_map('strval', $granted)), fn (string $c): bool => $this->menus->has($c)));
             sort($perms, SORT_STRING);
         }
@@ -91,7 +91,7 @@ final class PermissionService
         // data scope: union across roles; a role without a rule = self
         $data = ['all' => $isSuper, 'dept_ids' => [], 'self' => false];
         if (!$isSuper) {
-            $rules = $roleIds === [] ? [] : Orm::table('role_data_scope')->whereIn('role_id', $roleIds)->get()->keyBy('role_id')->all();
+            $rules = $roleIds === [] ? [] : Orm::table('uuims_role_data_scope')->whereIn('role_id', $roleIds)->get()->keyBy('role_id')->all();
             $deptRows = null;
             foreach ($roleIds as $rid) {
                 $rule = $rules[$rid] ?? $rules[(string) $rid] ?? null;
@@ -111,7 +111,7 @@ final class PermissionService
                         break;
                     case 'dept_and_child':
                         if ($uuims->dept_id) {
-                            $deptRows ??= Orm::table('depts')->select('id', 'parent_id')->get()->all();
+                            $deptRows ??= Orm::table('uuims_depts')->select('id', 'parent_id')->get()->all();
                             $data['dept_ids'] = array_merge($data['dept_ids'], Tree::descendants($deptRows, (int) $uuims->dept_id));
                         }
                         break;
@@ -128,8 +128,8 @@ final class PermissionService
 
         // field permissions: per field the broadest of (role rule ?? field default) across roles
         $fields = [];
-        $defs = Orm::table('resource_fields')->get()->all();
-        $grants = $isSuper || $roleIds === [] ? [] : Orm::table('role_field')->whereIn('role_id', $roleIds)->get()->all();
+        $defs = Orm::table('uuims_resource_fields')->get()->all();
+        $grants = $isSuper || $roleIds === [] ? [] : Orm::table('uuims_role_field')->whereIn('role_id', $roleIds)->get()->all();
         $byField = [];
         foreach ($grants as $g) {
             $byField[(int) $g['field_id']][(int) $g['role_id']] = (string) $g['perm'];

@@ -55,7 +55,7 @@ final class UuimsController
             }
         }
         $roles = $this->rolesOf($ids);
-        $depts = $deptIds === [] ? [] : Orm::table('depts')->whereIn('id', array_unique($deptIds))->pluck('name', 'id')->all();
+        $depts = $deptIds === [] ? [] : Orm::table('uuims_depts')->whereIn('id', array_unique($deptIds))->pluck('name', 'id')->all();
 
         return Api::page($p, static fn (Uuims $a): array => $a->toArray() + [
             'dept_name' => $depts[(int) $a->dept_id] ?? null,
@@ -172,9 +172,9 @@ final class UuimsController
             throw ApiException::conflict('不能删除自己');
         }
         Orm::transaction(static function () use ($uuims): void {
-            Orm::table('user_role')->where('user_id', $uuims->id)->delete();
-            Orm::table('user_wechat')->where('user_id', $uuims->id)->delete();
-            Orm::table('user_messages')->where('user_id', $uuims->id)->delete();   // P5 inbox (table from uuims:install)
+            Orm::table('uuims_user_role')->where('user_id', $uuims->id)->delete();
+            Orm::table('uuims_user_wechat')->where('user_id', $uuims->id)->delete();
+            Orm::table('uuims_user_messages')->where('user_id', $uuims->id)->delete();   // P5 inbox (table from uuims:install)
             $uuims->delete();
         });
         TokenService::revokeAll((int) $uuims->id);
@@ -222,12 +222,12 @@ final class UuimsController
         if ($roleIds === []) {
             return;
         }
-        $found = array_map('intval', Orm::table('roles')->whereIn('id', $roleIds)->pluck('id')->all());
+        $found = array_map('intval', Orm::table('uuims_roles')->whereIn('id', $roleIds)->pluck('id')->all());
         if (count($found) !== count($roleIds)) {
             throw ApiException::validation(['role_ids' => '角色不存在']);
         }
         if (!UuimsContext::isSuper()) {
-            $current = $targetId === null ? [] : array_map('intval', Orm::table('user_role')->where('user_id', $targetId)->pluck('role_id')->all());
+            $current = $targetId === null ? [] : array_map('intval', Orm::table('uuims_user_role')->where('user_id', $targetId)->pluck('role_id')->all());
             $new = array_diff($roleIds, $current);
             if (array_diff($new, UuimsContext::require()['role_ids']) !== []) {
                 throw ApiException::forbidden('只能分配自己拥有的角色', 40304);
@@ -238,9 +238,9 @@ final class UuimsController
     /** @param list<int> $roleIds */
     private function syncRoles(int $userId, array $roleIds): void
     {
-        Orm::table('user_role')->where('user_id', $userId)->delete();
+        Orm::table('uuims_user_role')->where('user_id', $userId)->delete();
         if ($roleIds !== []) {
-            Orm::table('user_role')->insert(array_map(static fn (int $r): array => ['user_id' => $userId, 'role_id' => $r], $roleIds));
+            Orm::table('uuims_user_role')->insert(array_map(static fn (int $r): array => ['user_id' => $userId, 'role_id' => $r], $roleIds));
         }
     }
 
@@ -254,8 +254,8 @@ final class UuimsController
             return [];
         }
         $out = [];
-        $rows = Orm::table('user_role')->join('roles', 'roles.id', '=', 'user_role.role_id')
-            ->whereIn('user_role.user_id', $userIds)->select('user_role.user_id', 'roles.id', 'roles.name')->get()->all();
+        $rows = Orm::table('uuims_user_role')->join('uuims_roles', 'uuims_roles.id', '=', 'uuims_user_role.role_id')
+            ->whereIn('uuims_user_role.user_id', $userIds)->select('uuims_user_role.user_id', 'uuims_roles.id', 'uuims_roles.name')->get()->all();
         foreach ($rows as $r) {
             $out[(int) $r['user_id']][] = ['id' => (int) $r['id'], 'name' => (string) $r['name']];
         }
