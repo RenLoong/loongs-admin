@@ -21,3 +21,9 @@ composer.dev.json
 apps/Erp
 apps/Mall
 apps/Wms
+apps/Crm
+apps/Hrm
+apps/Scm
+apps/Mes
+# Loongs Phase docs live under projects/docs (not uuims)
+docs/implementation/
