@@ -45,7 +45,7 @@ _flutter.loader.load({
     entrypointBaseUrl: "js/"
   },
   serviceWorkerSettings: {
-    serviceWorkerVersion: "554441471",
-    serviceWorkerUrl: "js/flutter_service_worker.js?v=554441471"
+    serviceWorkerVersion: "2599773202",
+    serviceWorkerUrl: "js/flutter_service_worker.js?v=2599773202"
   }
 });
