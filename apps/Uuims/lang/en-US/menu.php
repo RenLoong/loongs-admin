@@ -14,6 +14,7 @@ return [
     '角色' => 'Roles',
     '部门' => 'Departments',
     '菜单' => 'Menus',
+    '首页' => 'Home',
     '平台概览' => 'Overview',
     '消息' => 'Messages',
     '发送' => 'Send',
