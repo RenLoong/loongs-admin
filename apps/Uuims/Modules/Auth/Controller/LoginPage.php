@@ -22,10 +22,12 @@ use Loongs\OAuth\Http\OAuthResponse;
  * fields. First-party public clients → no consent screen; on success the uuims id is approved and the
  * library redirects (303) to the client's redirect_uri with code + state + iss.
  *
- * Trust this browser (opt-in): when the user checks "信任此浏览器" on a successful HTML password
- * login, an HttpOnly cookie (uuims_remember) stores an opaque Redis session (TTL configurable,
- * default 7 days). Within TTL the authorize page shows the remembered account; "继续授权" continues
- * without password; "切换账号" clears the cookie. Unchecked = no cookie; every visit needs password.
+ * Trust this browser (opt-in): after a successful HTML password login the page asks whether to trust
+ * this browser (no checkbox on the password form). "信任并继续授权" writes an HttpOnly cookie
+ * (uuims_remember, TTL configurable, default 7 days) then continues OAuth; "不信任并继续授权"
+ * clears any remember cookie and continues; "取消" drops the pending login and returns to the
+ * password form. Within TTL the authorize page shows the remembered account; "继续授权" continues
+ * without password; "切换账号" clears the cookie. Pending trust choice is a short-lived Redis token.
  *
  * CSRF / replay: every form carries a one-time nonce (Redis, 5 min) bound to its captcha (or to the
  * remembered user id for continue). Captcha image can be refreshed asynchronously via GET /oauth/captcha.
@@ -65,8 +67,8 @@ final class LoginPage
     {
         $json = $this->wantsJson($ar, $http);
         $theme = (string) ($http->input('ui_theme') ?? $http->query('ui_theme') ?? '');
-        $page = fn (string $error = '', string $username = '', int $status = 200, ?array $remembered = null): AuthorizationDecision
-            => $this->page($json, $ar, $error, $username, $status, $theme, $remembered, $http);
+        $page = fn (string $error = '', string $username = '', int $status = 200, ?array $remembered = null, ?array $trustAsk = null): AuthorizationDecision
+            => $this->page($json, $ar, $error, $username, $status, $theme, $remembered, $http, $trustAsk);
 
         $cookieToken = $this->cookieToken($http);
         $secure = $this->isSecure($http);
@@ -77,6 +79,33 @@ final class LoginPage
             $http->setAttribute('uuims_set_cookie', $this->remember->clearCookieHeader($secure));
 
             return $page();
+        }
+
+        // Trust prompt after password login (HTML only): trust | untrust | cancel.
+        if (!$json && $req->method === 'POST' && $req->param('trust_nonce', 'post') !== null) {
+            $pending = $this->remember->consumePending((string) $req->param('trust_nonce', 'post'));
+            $choice = (string) $req->param('trust_choice', 'post');
+            if ($pending === null) {
+                return $page('登录状态已失效，请重新登录');
+            }
+            if ($choice === 'cancel') {
+                return $page('', $pending['username']);
+            }
+            $uuims = Uuims::query()->withoutGlobalScope('data_scope')->find($pending['uid']);
+            if ($uuims === null || (int) $uuims->status !== 1) {
+                return $page('账号已停用或不存在', $pending['username']);
+            }
+            if ($choice === 'trust') {
+                $this->remember->forget($cookieToken);
+                $token = $this->remember->issue((int) $uuims->id, (string) $uuims->username);
+                $http->setAttribute('uuims_set_cookie', $this->remember->setCookieHeader($token, $secure));
+            } else {
+                // untrust (or unknown choice treated as untrust+continue): clear any remember cookie.
+                $this->remember->forget($cookieToken);
+                $http->setAttribute('uuims_set_cookie', $this->remember->clearCookieHeader($secure));
+            }
+
+            return AuthorizationDecision::approve((string) $uuims->id);
         }
 
         // Continue as remembered account (HTML only).
@@ -138,17 +167,14 @@ final class LoginPage
                 'last_login_ip' => (string) ($http->swoole()->server['remote_addr'] ?? ''),
             ])->save();
 
-            // Browser HTML login: only write remember cookie when the user opts in to trust this browser.
+            // Browser HTML: ask trust before completing authorize (JSON / mini-program skips the ask).
             if (!$json) {
-                $trust = in_array((string) $req->param('trust_browser', 'post'), ['1', 'on', 'true', 'yes'], true);
-                if ($trust) {
-                    $this->remember->forget($cookieToken);
-                    $token = $this->remember->issue((int) $uuims->id, (string) $uuims->username);
-                    $http->setAttribute('uuims_set_cookie', $this->remember->setCookieHeader($token, $secure));
-                } elseif ($cookieToken !== null) {
-                    $this->remember->forget($cookieToken);
-                    $http->setAttribute('uuims_set_cookie', $this->remember->clearCookieHeader($secure));
-                }
+                $trustNonce = $this->remember->issuePending((int) $uuims->id, (string) $uuims->username);
+
+                return $page('', (string) $uuims->username, 200, null, [
+                    'username' => (string) $uuims->username,
+                    'trust_nonce' => $trustNonce,
+                ]);
             }
 
             return AuthorizationDecision::approve((string) $uuims->id);
@@ -191,8 +217,9 @@ final class LoginPage
 
     /**
      * @param array{username: string, nickname: string, continue_nonce: string}|null $remembered
+     * @param array{username: string, trust_nonce: string}|null $trustAsk
      */
-    private function page(bool $json, AuthorizationRequest $ar, string $error = '', string $username = '', int $status = 200, string $theme = '', ?array $remembered = null, ?Request $http = null): AuthorizationDecision
+    private function page(bool $json, AuthorizationRequest $ar, string $error = '', string $username = '', int $status = 200, string $theme = '', ?array $remembered = null, ?Request $http = null, ?array $trustAsk = null): AuthorizationDecision
     {
         $error = I18n::msg($error);
         $locale = I18n::locale();
@@ -209,7 +236,8 @@ final class LoginPage
             ]], $status));
         }
 
-        $captcha = $remembered === null ? $this->guard->issue(false) : null;
+        $needCaptcha = $remembered === null && $trustAsk === null;
+        $captcha = $needCaptcha ? $this->guard->issue(false) : null;
         $html = self::render([
             'client' => $ar->client->name,
             'params' => $ar->parameters(),
@@ -221,6 +249,7 @@ final class LoginPage
             'theme' => in_array($theme, ['light', 'dark'], true) ? $theme : '',
             'languages' => self::languages($ar->parameters(), $theme),
             'remembered' => $remembered,
+            'trust_ask' => $trustAsk,
             'captcha_url' => '/oauth/captcha',
         ]);
 

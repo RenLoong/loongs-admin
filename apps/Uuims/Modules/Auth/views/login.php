@@ -10,6 +10,7 @@
  */
 $theme = in_array($v['theme'], ['light', 'dark'], true) ? $v['theme'] : '';
 $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
+$trustAsk = is_array($v['trust_ask'] ?? null) ? $v['trust_ask'] : null;
 ?>
 <!doctype html>
 <html lang="<?= $e($v['locale']) ?>"<?= $theme !== '' ? ' class="' . $e($theme) . '"' : '' ?>>
@@ -44,11 +45,12 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
   .cell input::placeholder{color:var(--sub);opacity:.7}
   .cell img{height:32px;border-radius:7px;margin-left:8px;background:#fff;cursor:pointer}
   .cell img.busy{opacity:.5;pointer-events:none}
-  .trust{display:flex;align-items:flex-start;gap:10px;margin-top:14px;padding:0 2px;cursor:pointer;user-select:none}
-  .trust input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--blue);cursor:pointer}
-  .trust .trust-text{flex:1;min-width:0}
-  .trust .trust-title{font-size:14px;font-weight:500;line-height:1.3}
-  .trust .trust-desc{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.35}
+  .ask-title{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:8px 0 0;text-align:center}
+  .ask-desc{font-size:14px;color:var(--sub);margin:10px 0 0;line-height:1.45;text-align:center}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;align-items:stretch}
+  .actions button{flex:1 1 0;min-width:96px;margin-top:0;font-size:14px;padding:12px 10px}
+  button.outline{background:transparent;color:var(--blue);border:.5px solid var(--blue);font-weight:600;box-shadow:none}
+  button.outline:active{background:rgba(10,132,255,.08)}
   .err{margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--red-bg);color:var(--red);font-size:13px}
   button{margin-top:18px;width:100%;height:46px;border:0;border-radius:12px;background:var(--blue);color:#fff;font:600 16px/1 inherit;font-family:inherit;cursor:pointer}
   button:active{background:var(--blue-press)}
@@ -68,8 +70,10 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
 <body>
 <form class="card" method="post" action="" autocomplete="off">
   <div class="logo" aria-hidden="true">L</div>
+<?php if ($trustAsk === null): ?>
   <h1><?= $e($t('统一用户身份管理系统（UUIMS）')) ?></h1>
   <p class="sub"><?= $e($t('登录以继续访问 {client}', ['client' => $v['client']])) ?></p>
+<?php endif; ?>
 <?php foreach ($v['params'] as $k => $val): ?>
   <input type="hidden" name="<?= $e($k) ?>" value="<?= $e($val) ?>">
 <?php endforeach; ?>
@@ -97,6 +101,18 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
 <?php endif; ?>
   <button type="submit"><?= $e($t('继续授权')) ?></button>
   <button type="submit" name="switch_account" value="1" class="secondary"><?= $e($t('切换账号')) ?></button>
+<?php elseif ($trustAsk !== null): ?>
+  <input type="hidden" name="trust_nonce" value="<?= $e($trustAsk['trust_nonce']) ?>">
+  <h2 class="ask-title"><?= $e($t('信任此浏览器？')) ?></h2>
+  <p class="ask-desc"><?= $e($t('若信任此浏览器，下次从此浏览器进入授权页时将不再要求输入账号密码（可继续授权 / 切换账号）。')) ?></p>
+<?php if ($v['error'] !== ''): ?>
+  <div class="err" role="alert"><?= $e($v['error']) ?></div>
+<?php endif; ?>
+  <div class="actions" role="group" aria-label="<?= $e($t('信任此浏览器？')) ?>">
+    <button type="submit" name="trust_choice" value="trust" class="outline"><?= $e($t('信任并继续授权')) ?></button>
+    <button type="submit" name="trust_choice" value="cancel" class="outline"><?= $e($t('取消')) ?></button>
+    <button type="submit" name="trust_choice" value="untrust"><?= $e($t('不信任并继续授权')) ?></button>
+  </div>
 <?php else: ?>
   <input type="hidden" name="login_nonce" id="login_nonce" value="<?= $e($v['nonce']) ?>">
   <div class="group">
@@ -104,13 +120,6 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
     <div class="cell"><label for="password"><?= $e($t('密码')) ?></label><input id="password" name="password" type="password" placeholder="<?= $e($t('请输入密码')) ?>" required autocomplete="current-password"></div>
     <div class="cell"><label for="captcha"><?= $e($t('验证码')) ?></label><input id="captcha" name="captcha" maxlength="4" placeholder="<?= $e($t('4 位字符')) ?>" required autocomplete="off"><img id="captcha-img" src="<?= $e($v['captcha']) ?>" alt="<?= $e($t('验证码')) ?>" title="<?= $e($t('看不清？点击换一张')) ?>" width="120" height="40"></div>
   </div>
-  <label class="trust" for="trust_browser">
-    <input type="checkbox" id="trust_browser" name="trust_browser" value="1">
-    <span class="trust-text">
-      <span class="trust-title"><?= $e($t('信任此浏览器')) ?></span>
-      <span class="trust-desc"><?= $e($t('信任后，此后从此浏览器授权无需再输入账号密码')) ?></span>
-    </span>
-  </label>
 <?php if ($v['error'] !== ''): ?>
   <div class="err" role="alert"><?= $e($v['error']) ?></div>
 <?php endif; ?>
@@ -123,7 +132,7 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
   </nav>
   <div class="foot"><?= $e($t('OAuth 2.1 · 授权码 + PKCE')) ?></div>
 </form>
-<?php if ($remembered === null): ?>
+<?php if ($remembered === null && $trustAsk === null): ?>
 <script>
 (function () {
   var url = <?= json_encode((string) ($v['captcha_url'] ?? '/oauth/captcha'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;

@@ -63,7 +63,7 @@ return [
         'max_failures' => (int) env('UUIMS_LOGIN_MAX_FAILURES', 5),   // per username, then locked
         'lock_seconds' => (int) env('UUIMS_LOGIN_LOCK_SECONDS', 900),
         'captcha_ttl' => 300,
-        // Browser authorize: opt-in 'trust this browser' cookie TTL (seconds, default 7 days).
+        // Browser authorize: trust-this-browser cookie TTL (after password login ask) (seconds, default 7 days).
         'remember_ttl' => (int) env('UUIMS_LOGIN_REMEMBER_TTL', 604800),
     ],
     'permission_cache_ttl' => 600,

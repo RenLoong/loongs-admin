@@ -8,7 +8,9 @@ namespace App\Uuims\Services;
  * Browser authorize "trust this browser" (opt-in): opaque HttpOnly cookie → Redis session.
  * Never stores passwords. Cookie name: uuims_remember. TTL defaults to 7 days (config).
  *
- * Also issues one-time continue_nonce values bound to a user id (CSRF for "continue as").
+ * Also issues one-time continue_nonce values bound to a user id (CSRF for "continue as"),
+ * and short-lived pending_auth tokens after password login until the user answers the
+ * trust prompt (trust / untrust / cancel).
  */
 final class LoginRemember
 {
@@ -17,6 +19,7 @@ final class LoginRemember
     public function __construct(
         private readonly int $ttl = 604800,
         private readonly int $continueTtl = 300,
+        private readonly int $pendingTtl = 300,
     ) {
     }
 
@@ -98,6 +101,61 @@ final class LoginRemember
         });
 
         return is_string($uid) && ctype_digit($uid) ? (int) $uid : null;
+    }
+
+    /**
+     * After successful password login: one-time pending token until the user answers the trust prompt.
+     *
+     * @return string 32-char hex
+     */
+    public function issuePending(int $userId, string $username): string
+    {
+        $nonce = bin2hex(random_bytes(16));
+        $payload = json_encode(['uid' => $userId, 'username' => $username], JSON_UNESCAPED_UNICODE);
+        redis()->run(fn (\Redis $r) => $r->setex(self::pendingKey($nonce), $this->pendingTtl, $payload));
+
+        return $nonce;
+    }
+
+    /**
+     * Consume pending trust token; returns user payload or null.
+     *
+     * @return array{uid: int, username: string}|null
+     */
+    public function consumePending(string $nonce): ?array
+    {
+        if (preg_match('/^[a-f0-9]{32}$/', $nonce) !== 1) {
+            return null;
+        }
+        $raw = redis()->run(static function (\Redis $r) use ($nonce): mixed {
+            $k = self::pendingKey($nonce);
+            $v = $r->get($k);
+            $r->del($k);
+
+            return $v;
+        });
+        if (!is_string($raw)) {
+            return null;
+        }
+        $data = json_decode($raw, true);
+        if (!is_array($data) || !isset($data['uid'], $data['username'])) {
+            return null;
+        }
+
+        return ['uid' => (int) $data['uid'], 'username' => (string) $data['username']];
+    }
+
+    public function forgetPending(string $nonce): void
+    {
+        if (preg_match('/^[a-f0-9]{32}$/', $nonce) !== 1) {
+            return;
+        }
+        redis()->run(static fn (\Redis $r) => $r->del(self::pendingKey($nonce)));
+    }
+
+    private static function pendingKey(string $nonce): string
+    {
+        return 'uuims:login:pending:' . $nonce;
     }
 
     /**
