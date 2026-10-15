@@ -12,7 +12,7 @@ return [
     '统一用户身份管理系统（UUIMS）' => '统一用户身份管理系统（UUIMS）',
     '登录以继续访问 {client}' => 'Sign in to continue to {client}',
     '验证码' => 'Captcha',
-    '看不清？刷新页面换一张' => 'Hard to read? Reload the page for a new one',
+    '看不清？点击换一张' => 'Hard to read? Tap for a new one',
     'OAuth 2.1 · 授权码 + PKCE' => 'OAuth 2.1 · Authorization code + PKCE',
     '请输入用户名' => 'Enter username',
     '请输入密码' => 'Enter password',
@@ -46,4 +46,9 @@ return [
     '该微信已绑定其他管理员账号，请先在该账号中解绑' => 'This WeChat is bound to another administrator; unbind it there first',
     '该微信未绑定管理员账号，请先使用账号密码登录，登录后将自动绑定此微信' => 'This WeChat is not bound to an administrator. Sign in with username and password first; this WeChat will then be bound automatically',
     '缺少 code（wx.login 返回的登录凭证）' => 'Missing code (the login code returned by wx.login)',
+    '继续授权' => 'Continue',
+    '切换账号' => 'Switch account',
+    '7 天内免输入密码' => 'No password needed for 7 days',
+    '登录状态已失效，请重新登录' => 'Sign-in expired, please sign in again',
+    '账号已停用或不存在' => 'Account disabled or missing',
 ];

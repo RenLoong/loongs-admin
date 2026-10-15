@@ -10,6 +10,7 @@ declare(strict_types=1);
 use App\Uuims\Modules\Auth\Controller\LoginPage;
 use App\Uuims\Render\PageService;
 use App\Uuims\Services\LoginGuard;
+use App\Uuims\Services\LoginRemember;
 use App\Uuims\Services\PermissionService;
 use App\Uuims\Services\Wechat\Code2SessionClient;
 use App\Uuims\Services\Wechat\HttpCode2SessionClient;
@@ -101,8 +102,15 @@ $container->singleton(LoginGuard::class, static function () use ($config): Login
 
     return new LoginGuard((int) ($cfg['max_failures'] ?? 5), (int) ($cfg['lock_seconds'] ?? 900), (int) ($cfg['captcha_ttl'] ?? 300));
 });
+$container->singleton(LoginRemember::class, static function () use ($config): LoginRemember {
+    $cfg = (array) $config->get('uuims.login', []);
+
+    return new LoginRemember((int) ($cfg['remember_ttl'] ?? 604800));
+});
 $container->singleton(LoginPage::class, static fn (): LoginPage => new LoginPage(
     $container->make(LoginGuard::class),
+    $container->make(LoginRemember::class),
+    $container->make(PublicOrigin::class),
     array_values((array) $config->get('uuims.oauth.json_redirect_uris', [])),
 ));
 

@@ -6,7 +6,9 @@ namespace App\Uuims\Modules\Auth\Controller;
 
 use App\Uuims\Models\Uuims;
 use App\Uuims\Services\LoginGuard;
+use App\Uuims\Services\LoginRemember;
 use App\Uuims\Support\I18n;
+use App\Uuims\Support\PublicOrigin;
 use Loongs\Http\Request;
 use Loongs\OAuth\Authorization\AuthorizationDecision;
 use Loongs\OAuth\Authorization\AuthorizationRequest;
@@ -20,13 +22,18 @@ use Loongs\OAuth\Http\OAuthResponse;
  * fields. First-party public clients → no consent screen; on success the uuims id is approved and the
  * library redirects (303) to the client's redirect_uri with code + state + iss.
  *
- * CSRF / replay: every form carries a one-time nonce (Redis, 5 min) bound to its captcha.
+ * Remember account (7 days): after a successful browser login an HttpOnly cookie (uuims_remember)
+ * stores an opaque Redis session. Within TTL the authorize page shows the remembered account;
+ * "继续授权" continues without password; "切换账号" clears the cookie and returns to the form.
+ *
+ * CSRF / replay: every form carries a one-time nonce (Redis, 5 min) bound to its captcha (or to the
+ * remembered user id for continue). Captcha image can be refreshed asynchronously via GET /oauth/captcha.
  *
  * JSON mode (uni-app mini program / H5, which cannot follow browser redirects): when the request has
  * `Accept: application/json` and the redirect URI is one of uuims.oauth.json_redirect_uris, the same
  * step answers {login: {login_nonce, captcha (PNG data URI), error}} instead of HTML; on success the
  * route converts the library's redirect into {code, state, iss} (routes.php). Still authorization
- * code + PKCE: the code is only redeemable with the client's code_verifier.
+ * code + PKCE: the code is only redeemable with the client's code_verifier. Remember cookie is HTML-only.
  *
  * Language / theme (README §19): texts and errors in the request locale (LocaleMiddleware:
  * ui_locales / lang / Accept-Language); ui_theme=light|dark forces the page theme (else
@@ -40,6 +47,8 @@ final class LoginPage
     /** @param list<string> $jsonRedirectUris */
     public function __construct(
         private readonly LoginGuard $guard,
+        private readonly LoginRemember $remember,
+        private readonly PublicOrigin $origin,
         private readonly array $jsonRedirectUris = [],
     ) {
     }
@@ -53,56 +62,136 @@ final class LoginPage
 
     public function handle(AuthorizationRequest $ar, OAuthRequest $req, AuthorizationServer $as, Request $http): AuthorizationDecision
     {
-        $json = $this->wantsJson($ar, $http);   // local: the page object is a per-worker singleton
+        $json = $this->wantsJson($ar, $http);
         $theme = (string) ($http->input('ui_theme') ?? $http->query('ui_theme') ?? '');
-        $page = fn (string $error = '', string $username = '', int $status = 200): AuthorizationDecision => $this->page($json, $ar, $error, $username, $status, $theme);
-        if ($req->method !== 'POST' || $req->param('login_nonce', 'post') === null) {
+        $page = fn (string $error = '', string $username = '', int $status = 200, ?array $remembered = null): AuthorizationDecision
+            => $this->page($json, $ar, $error, $username, $status, $theme, $remembered, $http);
+
+        $cookieToken = $this->cookieToken($http);
+        $secure = $this->isSecure($http);
+
+        // Switch account: clear remember and show the password form.
+        if ($req->param('switch_account', 'post') !== null || $http->query('switch_account') !== null) {
+            $this->remember->forget($cookieToken);
+            $http->setAttribute('uuims_set_cookie', $this->remember->clearCookieHeader($secure));
+
             return $page();
         }
-        $username = trim((string) $req->param('username', 'post'));
-        $password = (string) $req->param('password', 'post');
-        $check = $this->guard->consume((string) $req->param('login_nonce', 'post'), (string) $req->param('captcha', 'post'));
-        if ($check === 'expired') {
-            return $page('页面已过期，请重新输入', $username);
-        }
-        if ($username === '' || $password === '') {
-            return $page('请输入用户名和密码', $username);
-        }
-        if (($locked = $this->guard->lockedFor($username)) > 0) {
-            return $page(I18n::t('登录失败次数过多，请 {minutes} 分钟后再试', ['minutes' => (int) ceil($locked / 60)]), $username, 429);
-        }
-        if ($check === 'captcha') {
-            return $page('验证码错误', $username);
+
+        // Continue as remembered account (HTML only).
+        if (!$json && $req->method === 'POST' && $req->param('continue_nonce', 'post') !== null) {
+            $uid = $this->remember->consumeContinue((string) $req->param('continue_nonce', 'post'));
+            $session = $this->remember->read($cookieToken);
+            if ($uid === null || $session === null || $session['uid'] !== $uid) {
+                $this->remember->forget($cookieToken);
+                $http->setAttribute('uuims_set_cookie', $this->remember->clearCookieHeader($secure));
+
+                return $page('登录状态已失效，请重新登录');
+            }
+            $uuims = Uuims::query()->withoutGlobalScope('data_scope')->find($uid);
+            if ($uuims === null || (int) $uuims->status !== 1) {
+                $this->remember->forget($cookieToken);
+                $http->setAttribute('uuims_set_cookie', $this->remember->clearCookieHeader($secure));
+
+                return $page('账号已停用或不存在');
+            }
+            $this->remember->touch($cookieToken);
+
+            return AuthorizationDecision::approve((string) $uuims->id);
         }
 
-        $uuims = Uuims::query()->withoutGlobalScope('data_scope')->where('username', $username)->first();
-        $ok = password_verify($password, $uuims !== null ? (string) $uuims->getAttribute('password') : (self::$dummyHash ??= Uuims::hashPassword(random_bytes(16))));
-        if (!$ok || $uuims === null) {
-            $left = $this->guard->fail($username);
+        // Password + captcha login.
+        if ($req->method === 'POST' && $req->param('login_nonce', 'post') !== null) {
+            $username = trim((string) $req->param('username', 'post'));
+            $password = (string) $req->param('password', 'post');
+            $check = $this->guard->consume((string) $req->param('login_nonce', 'post'), (string) $req->param('captcha', 'post'));
+            if ($check === 'expired') {
+                return $page('页面已过期，请重新输入', $username);
+            }
+            if ($username === '' || $password === '') {
+                return $page('请输入用户名和密码', $username);
+            }
+            if (($locked = $this->guard->lockedFor($username)) > 0) {
+                return $page(I18n::t('登录失败次数过多，请 {minutes} 分钟后再试', ['minutes' => (int) ceil($locked / 60)]), $username, 429);
+            }
+            if ($check === 'captcha') {
+                return $page('验证码错误', $username);
+            }
 
-            return $page($left > 0 ? I18n::t('用户名或密码错误（还可尝试 {left} 次）', ['left' => $left]) : '登录失败次数过多，账号已临时锁定', $username, 401);
-        }
-        if ((int) $uuims->status !== 1) {
-            return $page('账号已停用', $username, 403);
-        }
-        $this->guard->clear($username);
-        if (password_needs_rehash((string) $uuims->getAttribute('password'), PASSWORD_ARGON2ID)) {
-            $uuims->forceFill(['password' => Uuims::hashPassword($password)]);
-        }
-        $uuims->forceFill([
-            'last_login_at' => date('Y-m-d H:i:s'),
-            'last_login_ip' => (string) ($http->swoole()->server['remote_addr'] ?? ''),
-        ])->save();
+            $uuims = Uuims::query()->withoutGlobalScope('data_scope')->where('username', $username)->first();
+            $ok = password_verify($password, $uuims !== null ? (string) $uuims->getAttribute('password') : (self::$dummyHash ??= Uuims::hashPassword(random_bytes(16))));
+            if (!$ok || $uuims === null) {
+                $left = $this->guard->fail($username);
 
-        return AuthorizationDecision::approve((string) $uuims->id);
+                return $page($left > 0 ? I18n::t('用户名或密码错误（还可尝试 {left} 次）', ['left' => $left]) : '登录失败次数过多，账号已临时锁定', $username, 401);
+            }
+            if ((int) $uuims->status !== 1) {
+                return $page('账号已停用', $username, 403);
+            }
+            $this->guard->clear($username);
+            if (password_needs_rehash((string) $uuims->getAttribute('password'), PASSWORD_ARGON2ID)) {
+                $uuims->forceFill(['password' => Uuims::hashPassword($password)]);
+            }
+            $uuims->forceFill([
+                'last_login_at' => date('Y-m-d H:i:s'),
+                'last_login_ip' => (string) ($http->swoole()->server['remote_addr'] ?? ''),
+            ])->save();
+
+            // Browser HTML login: remember account for 7 days (opaque cookie, no password).
+            if (!$json) {
+                $this->remember->forget($cookieToken);
+                $token = $this->remember->issue((int) $uuims->id, (string) $uuims->username);
+                $http->setAttribute('uuims_set_cookie', $this->remember->setCookieHeader($token, $secure));
+            }
+
+            return AuthorizationDecision::approve((string) $uuims->id);
+        }
+
+        // GET (or POST without login fields): show remembered account or captcha form.
+        if (!$json) {
+            $session = $this->remember->read($cookieToken);
+            if ($session !== null) {
+                $uuims = Uuims::query()->withoutGlobalScope('data_scope')->find($session['uid']);
+                if ($uuims !== null && (int) $uuims->status === 1) {
+                    return $page('', '', 200, [
+                        'username' => (string) $uuims->username,
+                        'nickname' => (string) ($uuims->nickname ?? ''),
+                        'continue_nonce' => $this->remember->issueContinue((int) $uuims->id),
+                    ]);
+                }
+                $this->remember->forget($cookieToken);
+                $http->setAttribute('uuims_set_cookie', $this->remember->clearCookieHeader($secure));
+            }
+        }
+
+        return $page();
     }
 
-    private function page(bool $json, AuthorizationRequest $ar, string $error = '', string $username = '', int $status = 200, string $theme = ''): AuthorizationDecision
+    private function cookieToken(Request $http): ?string
     {
-        $captcha = $this->guard->issue($json);
+        $cookies = $http->swoole()->cookie ?? [];
+        $v = $cookies[LoginRemember::COOKIE] ?? null;
+
+        return is_string($v) && $v !== '' ? $v : null;
+    }
+
+    private function isSecure(Request $http): bool
+    {
+        $origin = $this->origin->requestOrigin($http) ?? $this->origin->issuerFor($http);
+
+        return str_starts_with(strtolower($origin), 'https://');
+    }
+
+    /**
+     * @param array{username: string, nickname: string, continue_nonce: string}|null $remembered
+     */
+    private function page(bool $json, AuthorizationRequest $ar, string $error = '', string $username = '', int $status = 200, string $theme = '', ?array $remembered = null, ?Request $http = null): AuthorizationDecision
+    {
         $error = I18n::msg($error);
         $locale = I18n::locale();
         if ($json) {
+            $captcha = $this->guard->issue(true);
+
             return AuthorizationDecision::respond(OAuthResponse::json(['login' => [
                 'client' => $ar->client->name,
                 'login_nonce' => $captcha['nonce'],
@@ -112,23 +201,27 @@ final class LoginPage
                 'locale' => $locale,
             ]], $status));
         }
+
+        $captcha = $remembered === null ? $this->guard->issue(false) : null;
         $html = self::render([
             'client' => $ar->client->name,
             'params' => $ar->parameters(),
-            'nonce' => $captcha['nonce'],
-            'captcha' => 'data:image/svg+xml;base64,' . base64_encode($captcha['svg']),
+            'nonce' => $captcha['nonce'] ?? '',
+            'captcha' => $captcha !== null ? 'data:image/svg+xml;base64,' . base64_encode($captcha['svg']) : '',
             'error' => $error,
             'username' => $username,
             'locale' => $locale,
             'theme' => in_array($theme, ['light', 'dark'], true) ? $theme : '',
             'languages' => self::languages($ar->parameters(), $theme),
+            'remembered' => $remembered,
+            'captcha_url' => '/oauth/captcha',
         ]);
 
         return AuthorizationDecision::respond(new OAuthResponse($status, [
             'Content-Type' => 'text/html; charset=utf-8',
             'Cache-Control' => 'no-store',
             'X-Frame-Options' => 'DENY',
-            'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'none'",
+            'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             'Referrer-Policy' => 'no-referrer',
             'Content-Language' => $locale,
         ], $html));

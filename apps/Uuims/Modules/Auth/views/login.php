@@ -1,14 +1,15 @@
 <?php
 /**
  * Authorization login page (Apple HIG look: grouped inset form, systemBlue, light / dark).
- * No scripts (CSP default-src 'none'): dark mode follows prefers-color-scheme unless the client
- * passes ui_theme=light|dark; the language switcher is plain links (ui_locales=…).
+ * Captcha refreshes via fetch(/oauth/captcha) without reloading the page (script-src + connect-src
+ * allowed in CSP). Remembered accounts skip the password form for 7 days.
  *
  * @var array<string, mixed> $v
  * @var Closure(mixed): string $e   HTML escape
  * @var Closure(string, array<string, mixed>=): string $t   translate (request locale)
  */
 $theme = in_array($v['theme'], ['light', 'dark'], true) ? $v['theme'] : '';
+$remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
 ?>
 <!doctype html>
 <html lang="<?= $e($v['locale']) ?>"<?= $theme !== '' ? ' class="' . $e($theme) . '"' : '' ?>>
@@ -41,11 +42,20 @@ $theme = in_array($v['theme'], ['light', 'dark'], true) ? $v['theme'] : '';
   .cell label{width:84px;flex:none;font-size:15px}
   .cell input{flex:1;min-width:0;height:44px;border:0;background:transparent;color:var(--fg);font:inherit;outline:none}
   .cell input::placeholder{color:var(--sub);opacity:.7}
-  .cell img{height:32px;border-radius:7px;margin-left:8px;background:#fff}
-  .hint{font-size:12px;color:var(--sub);margin:6px 14px 0}
+  .cell img{height:32px;border-radius:7px;margin-left:8px;background:#fff;cursor:pointer}
+  .cell img.busy{opacity:.5;pointer-events:none}
+  .hint{font-size:12px;color:var(--blue);margin:6px 14px 0;cursor:pointer;user-select:none}
+  .hint:hover{text-decoration:underline}
   .err{margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--red-bg);color:var(--red);font-size:13px}
   button{margin-top:18px;width:100%;height:46px;border:0;border-radius:12px;background:var(--blue);color:#fff;font:600 16px/1 inherit;font-family:inherit;cursor:pointer}
   button:active{background:var(--blue-press)}
+  button.secondary{margin-top:10px;background:transparent;color:var(--blue);border:.5px solid var(--sep);font-weight:500;font-size:15px}
+  button.secondary:active{background:var(--seg)}
+  .account{display:flex;align-items:center;gap:14px;padding:16px 14px}
+  .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0a84ff,#5e5ce6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex:none}
+  .account .meta{min-width:0;flex:1}
+  .account .name{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .account .subname{font-size:12px;color:var(--sub);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .seg{display:flex;gap:2px;padding:2px;border-radius:9px;background:var(--seg);margin:18px auto 0;width:max-content}
   .seg a{display:block;padding:5px 14px;border-radius:7px;font-size:12px;color:var(--fg);text-decoration:none}
   .seg a.on{background:var(--seg-on);box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04);font-weight:600}
@@ -60,21 +70,43 @@ $theme = in_array($v['theme'], ['light', 'dark'], true) ? $v['theme'] : '';
 <?php foreach ($v['params'] as $k => $val): ?>
   <input type="hidden" name="<?= $e($k) ?>" value="<?= $e($val) ?>">
 <?php endforeach; ?>
-  <input type="hidden" name="login_nonce" value="<?= $e($v['nonce']) ?>">
   <input type="hidden" name="ui_locales" value="<?= $e($v['locale']) ?>">
 <?php if ($theme !== ''): ?>
   <input type="hidden" name="ui_theme" value="<?= $e($theme) ?>">
 <?php endif; ?>
+<?php if ($remembered !== null): ?>
+  <input type="hidden" name="continue_nonce" value="<?= $e($remembered['continue_nonce']) ?>">
+  <div class="group">
+    <div class="account">
+      <div class="avatar" aria-hidden="true"><?= $e(mb_strtoupper(mb_substr((string) $remembered['username'], 0, 1))) ?></div>
+      <div class="meta">
+        <div class="name"><?= $e($remembered['username']) ?></div>
+<?php if (($remembered['nickname'] ?? '') !== '' && $remembered['nickname'] !== $remembered['username']): ?>
+        <div class="subname"><?= $e($remembered['nickname']) ?></div>
+<?php else: ?>
+        <div class="subname"><?= $e($t('7 天内免输入密码')) ?></div>
+<?php endif; ?>
+      </div>
+    </div>
+  </div>
+<?php if ($v['error'] !== ''): ?>
+  <div class="err" role="alert"><?= $e($v['error']) ?></div>
+<?php endif; ?>
+  <button type="submit"><?= $e($t('继续授权')) ?></button>
+  <button type="submit" name="switch_account" value="1" class="secondary"><?= $e($t('切换账号')) ?></button>
+<?php else: ?>
+  <input type="hidden" name="login_nonce" id="login_nonce" value="<?= $e($v['nonce']) ?>">
   <div class="group">
     <div class="cell"><label for="username"><?= $e($t('用户名')) ?></label><input id="username" name="username" value="<?= $e($v['username']) ?>" placeholder="<?= $e($t('请输入用户名')) ?>" required autofocus></div>
     <div class="cell"><label for="password"><?= $e($t('密码')) ?></label><input id="password" name="password" type="password" placeholder="<?= $e($t('请输入密码')) ?>" required autocomplete="current-password"></div>
-    <div class="cell"><label for="captcha"><?= $e($t('验证码')) ?></label><input id="captcha" name="captcha" maxlength="4" placeholder="<?= $e($t('4 位字符')) ?>" required><img src="<?= $e($v['captcha']) ?>" alt="<?= $e($t('验证码')) ?>" title="<?= $e($t('看不清？刷新页面换一张')) ?>"></div>
+    <div class="cell"><label for="captcha"><?= $e($t('验证码')) ?></label><input id="captcha" name="captcha" maxlength="4" placeholder="<?= $e($t('4 位字符')) ?>" required autocomplete="off"><img id="captcha-img" src="<?= $e($v['captcha']) ?>" alt="<?= $e($t('验证码')) ?>" title="<?= $e($t('看不清？点击换一张')) ?>" width="120" height="40"></div>
   </div>
-  <div class="hint"><?= $e($t('看不清？刷新页面换一张')) ?></div>
+  <div class="hint" id="captcha-hint" role="button" tabindex="0"><?= $e($t('看不清？点击换一张')) ?></div>
 <?php if ($v['error'] !== ''): ?>
   <div class="err" role="alert"><?= $e($v['error']) ?></div>
 <?php endif; ?>
   <button type="submit"><?= $e($t('登录')) ?></button>
+<?php endif; ?>
   <nav class="seg" aria-label="<?= $e($t('语言')) ?>">
 <?php foreach ($v['languages'] as $lang): ?>
     <a href="<?= $e($lang['href']) ?>" hreflang="<?= $e($lang['locale']) ?>" lang="<?= $e($lang['locale']) ?>"<?= $lang['locale'] === $v['locale'] ? ' class="on" aria-current="true"' : '' ?>><?= $e($lang['name']) ?></a>
@@ -82,5 +114,40 @@ $theme = in_array($v['theme'], ['light', 'dark'], true) ? $v['theme'] : '';
   </nav>
   <div class="foot"><?= $e($t('OAuth 2.1 · 授权码 + PKCE')) ?></div>
 </form>
+<?php if ($remembered === null): ?>
+<script>
+(function () {
+  var url = <?= json_encode((string) ($v['captcha_url'] ?? '/oauth/captcha'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  var img = document.getElementById('captcha-img');
+  var nonce = document.getElementById('login_nonce');
+  var input = document.getElementById('captcha');
+  var hint = document.getElementById('captcha-hint');
+  var busy = false;
+  function refresh() {
+    if (busy || !img || !nonce) return;
+    busy = true;
+    img.classList.add('busy');
+    fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (d) {
+        if (d && d.login_nonce && d.captcha) {
+          nonce.value = d.login_nonce;
+          img.src = d.captcha;
+          if (input) input.value = '';
+        }
+      })
+      .catch(function () { /* keep current captcha on failure */ })
+      .finally(function () { busy = false; img.classList.remove('busy'); });
+  }
+  if (img) img.addEventListener('click', function (e) { e.preventDefault(); refresh(); });
+  if (hint) {
+    hint.addEventListener('click', function (e) { e.preventDefault(); refresh(); });
+    hint.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); refresh(); }
+    });
+  }
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
