@@ -52,8 +52,8 @@ return [
     '账号已停用或不存在' => 'Account disabled or missing',
     '信任此浏览器？' => 'Trust this browser?',
     '若信任此浏览器，下次从此浏览器进入授权页时将不再要求输入账号密码（可继续授权 / 切换账号）。' => 'If you trust this browser, the next time you open the authorize page from it you will not need to enter username and password (you can continue authorizing or switch accounts).',
-    '信任并继续授权' => 'Trust and continue',
+    '信任' => 'Trust',
     '取消' => 'Cancel',
-    '不信任并继续授权' => 'Continue without trusting',
+    '不信任' => 'Do not trust',
     '已信任此浏览器' => 'Trusted browser',
 ];

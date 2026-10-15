@@ -23,8 +23,8 @@ use Loongs\OAuth\Http\OAuthResponse;
  * library redirects (303) to the client's redirect_uri with code + state + iss.
  *
  * Trust this browser (opt-in): after a successful HTML password login the page asks whether to trust
- * this browser (no checkbox on the password form). "信任并继续授权" writes an HttpOnly cookie
- * (uuims_remember, TTL configurable, default 7 days) then continues OAuth; "不信任并继续授权"
+ * this browser (no checkbox on the password form). "信任" writes an HttpOnly cookie
+ * (uuims_remember, TTL configurable, default 7 days) then continues OAuth; "不信任"
  * clears any remember cookie and continues; "取消" drops the pending login and returns to the
  * password form. Within TTL the authorize page shows the remembered account; "继续授权" continues
  * without password; "切换账号" clears the cookie. Pending trust choice is a short-lived Redis token.

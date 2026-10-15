@@ -47,8 +47,10 @@ $trustAsk = is_array($v['trust_ask'] ?? null) ? $v['trust_ask'] : null;
   .cell img.busy{opacity:.5;pointer-events:none}
   .ask-title{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:8px 0 0;text-align:center}
   .ask-desc{font-size:14px;color:var(--sub);margin:10px 0 0;line-height:1.45;text-align:center}
-  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;align-items:stretch}
-  .actions button{flex:1 1 0;min-width:96px;margin-top:0;font-size:14px;padding:12px 10px}
+  .actions{display:flex;gap:10px;margin-top:22px;align-items:stretch}
+  .actions button,.actions-gap{flex:1 1 0;min-width:72px}
+  .actions-gap{visibility:hidden;pointer-events:none}
+  .actions button{margin-top:0;width:auto;font-size:14px;padding:12px 10px}
   button.outline{background:transparent;color:var(--blue);border:.5px solid var(--blue);font-weight:600;box-shadow:none}
   button.outline:active{background:rgba(10,132,255,.08)}
   .err{margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--red-bg);color:var(--red);font-size:13px}
@@ -109,9 +111,10 @@ $trustAsk = is_array($v['trust_ask'] ?? null) ? $v['trust_ask'] : null;
   <div class="err" role="alert"><?= $e($v['error']) ?></div>
 <?php endif; ?>
   <div class="actions" role="group" aria-label="<?= $e($t('信任此浏览器？')) ?>">
-    <button type="submit" name="trust_choice" value="trust" class="outline"><?= $e($t('信任并继续授权')) ?></button>
     <button type="submit" name="trust_choice" value="cancel" class="outline"><?= $e($t('取消')) ?></button>
-    <button type="submit" name="trust_choice" value="untrust"><?= $e($t('不信任并继续授权')) ?></button>
+    <span class="actions-gap" aria-hidden="true"></span>
+    <button type="submit" name="trust_choice" value="untrust" class="outline"><?= $e($t('不信任')) ?></button>
+    <button type="submit" name="trust_choice" value="trust"><?= $e($t('信任')) ?></button>
   </div>
 <?php else: ?>
   <input type="hidden" name="login_nonce" id="login_nonce" value="<?= $e($v['nonce']) ?>">
