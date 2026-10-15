@@ -2,7 +2,7 @@
 /**
  * Authorization login page (Apple HIG look: grouped inset form, systemBlue, light / dark).
  * Captcha refreshes via fetch(/oauth/captcha) without reloading the page (script-src + connect-src
- * allowed in CSP). Remembered accounts skip the password form for 7 days.
+ * allowed in CSP). Opt-in "trust this browser" writes an HttpOnly remember cookie (TTL configurable).
  *
  * @var array<string, mixed> $v
  * @var Closure(mixed): string $e   HTML escape
@@ -44,8 +44,11 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
   .cell input::placeholder{color:var(--sub);opacity:.7}
   .cell img{height:32px;border-radius:7px;margin-left:8px;background:#fff;cursor:pointer}
   .cell img.busy{opacity:.5;pointer-events:none}
-  .hint{font-size:12px;color:var(--blue);margin:6px 14px 0;cursor:pointer;user-select:none}
-  .hint:hover{text-decoration:underline}
+  .trust{display:flex;align-items:flex-start;gap:10px;margin-top:14px;padding:0 2px;cursor:pointer;user-select:none}
+  .trust input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--blue);cursor:pointer}
+  .trust .trust-text{flex:1;min-width:0}
+  .trust .trust-title{font-size:14px;font-weight:500;line-height:1.3}
+  .trust .trust-desc{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.35}
   .err{margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--red-bg);color:var(--red);font-size:13px}
   button{margin-top:18px;width:100%;height:46px;border:0;border-radius:12px;background:var(--blue);color:#fff;font:600 16px/1 inherit;font-family:inherit;cursor:pointer}
   button:active{background:var(--blue-press)}
@@ -84,7 +87,7 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
 <?php if (($remembered['nickname'] ?? '') !== '' && $remembered['nickname'] !== $remembered['username']): ?>
         <div class="subname"><?= $e($remembered['nickname']) ?></div>
 <?php else: ?>
-        <div class="subname"><?= $e($t('7 天内免输入密码')) ?></div>
+        <div class="subname"><?= $e($t('已信任此浏览器')) ?></div>
 <?php endif; ?>
       </div>
     </div>
@@ -101,7 +104,13 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
     <div class="cell"><label for="password"><?= $e($t('密码')) ?></label><input id="password" name="password" type="password" placeholder="<?= $e($t('请输入密码')) ?>" required autocomplete="current-password"></div>
     <div class="cell"><label for="captcha"><?= $e($t('验证码')) ?></label><input id="captcha" name="captcha" maxlength="4" placeholder="<?= $e($t('4 位字符')) ?>" required autocomplete="off"><img id="captcha-img" src="<?= $e($v['captcha']) ?>" alt="<?= $e($t('验证码')) ?>" title="<?= $e($t('看不清？点击换一张')) ?>" width="120" height="40"></div>
   </div>
-  <div class="hint" id="captcha-hint" role="button" tabindex="0"><?= $e($t('看不清？点击换一张')) ?></div>
+  <label class="trust" for="trust_browser">
+    <input type="checkbox" id="trust_browser" name="trust_browser" value="1">
+    <span class="trust-text">
+      <span class="trust-title"><?= $e($t('信任此浏览器')) ?></span>
+      <span class="trust-desc"><?= $e($t('信任后，此后从此浏览器授权无需再输入账号密码')) ?></span>
+    </span>
+  </label>
 <?php if ($v['error'] !== ''): ?>
   <div class="err" role="alert"><?= $e($v['error']) ?></div>
 <?php endif; ?>
@@ -121,7 +130,6 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
   var img = document.getElementById('captcha-img');
   var nonce = document.getElementById('login_nonce');
   var input = document.getElementById('captcha');
-  var hint = document.getElementById('captcha-hint');
   var busy = false;
   function refresh() {
     if (busy || !img || !nonce) return;
@@ -140,12 +148,6 @@ $remembered = is_array($v['remembered'] ?? null) ? $v['remembered'] : null;
       .finally(function () { busy = false; img.classList.remove('busy'); });
   }
   if (img) img.addEventListener('click', function (e) { e.preventDefault(); refresh(); });
-  if (hint) {
-    hint.addEventListener('click', function (e) { e.preventDefault(); refresh(); });
-    hint.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); refresh(); }
-    });
-  }
 })();
 </script>
 <?php endif; ?>

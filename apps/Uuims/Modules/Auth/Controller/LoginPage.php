@@ -22,9 +22,10 @@ use Loongs\OAuth\Http\OAuthResponse;
  * fields. First-party public clients → no consent screen; on success the uuims id is approved and the
  * library redirects (303) to the client's redirect_uri with code + state + iss.
  *
- * Remember account (7 days): after a successful browser login an HttpOnly cookie (uuims_remember)
- * stores an opaque Redis session. Within TTL the authorize page shows the remembered account;
- * "继续授权" continues without password; "切换账号" clears the cookie and returns to the form.
+ * Trust this browser (opt-in): when the user checks "信任此浏览器" on a successful HTML password
+ * login, an HttpOnly cookie (uuims_remember) stores an opaque Redis session (TTL configurable,
+ * default 7 days). Within TTL the authorize page shows the remembered account; "继续授权" continues
+ * without password; "切换账号" clears the cookie. Unchecked = no cookie; every visit needs password.
  *
  * CSRF / replay: every form carries a one-time nonce (Redis, 5 min) bound to its captcha (or to the
  * remembered user id for continue). Captcha image can be refreshed asynchronously via GET /oauth/captcha.
@@ -137,11 +138,17 @@ final class LoginPage
                 'last_login_ip' => (string) ($http->swoole()->server['remote_addr'] ?? ''),
             ])->save();
 
-            // Browser HTML login: remember account for 7 days (opaque cookie, no password).
+            // Browser HTML login: only write remember cookie when the user opts in to trust this browser.
             if (!$json) {
-                $this->remember->forget($cookieToken);
-                $token = $this->remember->issue((int) $uuims->id, (string) $uuims->username);
-                $http->setAttribute('uuims_set_cookie', $this->remember->setCookieHeader($token, $secure));
+                $trust = in_array((string) $req->param('trust_browser', 'post'), ['1', 'on', 'true', 'yes'], true);
+                if ($trust) {
+                    $this->remember->forget($cookieToken);
+                    $token = $this->remember->issue((int) $uuims->id, (string) $uuims->username);
+                    $http->setAttribute('uuims_set_cookie', $this->remember->setCookieHeader($token, $secure));
+                } elseif ($cookieToken !== null) {
+                    $this->remember->forget($cookieToken);
+                    $http->setAttribute('uuims_set_cookie', $this->remember->clearCookieHeader($secure));
+                }
             }
 
             return AuthorizationDecision::approve((string) $uuims->id);

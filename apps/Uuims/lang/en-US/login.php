@@ -48,7 +48,9 @@ return [
     '缺少 code（wx.login 返回的登录凭证）' => 'Missing code (the login code returned by wx.login)',
     '继续授权' => 'Continue',
     '切换账号' => 'Switch account',
-    '7 天内免输入密码' => 'No password needed for 7 days',
     '登录状态已失效，请重新登录' => 'Sign-in expired, please sign in again',
     '账号已停用或不存在' => 'Account disabled or missing',
+    '信任此浏览器' => 'Trust this browser',
+    '信任后，此后从此浏览器授权无需再输入账号密码' => 'When trusted, later authorizations from this browser skip username and password',
+    '已信任此浏览器' => 'Trusted browser',
 ];

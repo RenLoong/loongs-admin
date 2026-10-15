@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Uuims\Services;
 
 /**
- * Browser authorize login remember (7 days): opaque HttpOnly cookie → Redis session.
- * Never stores passwords. Cookie name: uuims_remember.
+ * Browser authorize "trust this browser" (opt-in): opaque HttpOnly cookie → Redis session.
+ * Never stores passwords. Cookie name: uuims_remember. TTL defaults to 7 days (config).
  *
  * Also issues one-time continue_nonce values bound to a user id (CSRF for "continue as").
  */
